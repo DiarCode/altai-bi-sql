@@ -1,0 +1,126 @@
+model CarAnalysis {
+  id                Int                @id @default(autoincrement())
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            Int
+  carModel          String
+  carYear           Int
+  city              String
+  vin               String
+  createdAt         DateTime           @default(now())
+  totalEstimatedCost Int
+  overallScore      Int                @default(0)
+  status            CarStatus          @default(EXCELLENT)
+  summary           String             @db.Text
+  zones             CarAnalysisZone[]
+}
+
+model CarAnalysisZone {
+  id           Int      @id @default(autoincrement())
+  analysis     CarAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  analysisId   Int
+  name         String
+  breaking     Boolean
+  hasRust      Boolean
+  isDirty      Boolean
+  importance   IMPORTANCE
+  consequences String[]
+  estimatedCost Int
+  urgency      URGENCY
+  timeToFix    String
+}
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id          Int      @id @default(autoincrement()) @map("id")
+  name        String   @map("name")
+  phoneNumber String   @unique @map("phone_number")
+  carModel    String?  @map("car_model")
+  carYear     Int?     @map("car_year")
+  carColor    String?  @map("car_color")
+  vinNumber   String?  @map("vin_number")
+  city        String?  @map("city")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  otpRequest UsersOTPRequest?
+  session    UsersSession?
+  analyses   CarAnalysis[]
+
+  @@map("users")
+}
+
+model UsersOTPRequest {
+  id          Int      @id @default(autoincrement()) @map("id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      Int      @unique @map("user_id")
+  phoneNumber String   @map("phone_number")
+  otpCode     String   @map("otp_code")
+  createdAt   DateTime @default(now()) @map("created_at")
+  expiresAt   DateTime @map("expires_at")
+
+  @@map("users_otp_requests")
+}
+
+model UsersSession {
+  id        Int      @id @default(autoincrement()) @map("id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int      @unique @map("user_id")
+  token     String   @unique @map("token")
+  createdAt DateTime @default(now()) @map("created_at")
+  expiresAt DateTime @map("expires_at")
+
+  @@map("users_sessions")
+}
+
+enum SERVICE_TYPE {
+  REPAIR
+  MAINTENANCE
+  WASHING
+  TIRE_SERVICE
+  DIAGNOSTICS
+  OTHER
+}
+
+enum CarStatus {
+  EXCELLENT
+  COSMETIC_ISSUES
+  MECHANICAL_SERVICE_NEEDED
+  CRITICAL_CONDITION
+}
+
+enum URGENCY {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum IMPORTANCE {
+  CRITICAL
+  MODERATE
+  MINOR
+}
+
+model InDrivePartner {
+  id        Int      @id @default(autoincrement()) @map("id")
+  name      String   @map("name")
+  city      String   @map("city")
+  address   String   @map("address")
+  phone     String   @map("phone")
+  description String?  @map("description")
+  serviceType SERVICE_TYPE @map("service_type")
+  rating    Float    @default(0) @map("rating")
+  reviewsCount Int   @default(0) @map("reviews_count")
+  latitude  Float    @map("latitude")
+  longitude Float    @map("longitude")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("indrive_partners")
+}

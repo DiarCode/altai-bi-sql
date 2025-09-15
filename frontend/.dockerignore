@@ -1,0 +1,40 @@
+# Ignore node_modules and dependency lock files (they will be installed inside the container)
+node_modules/
+npm-debug.log*
+yarn.lock
+pnpm-lock.yaml
+
+# Ignore build artifacts (will be generated inside the container)
+dist/
+.vite/
+.vitepress/
+.cache/
+*.log
+
+# Ignore IDE/editor config files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ignore system files
+.DS_Store
+Thumbs.db
+
+# Ignore test and local environment files
+coverage/
+.env
+.env.local
+.env.*.local
+!.env.example  # Allow example environment file
+
+# Ignore CI/CD and git-related files
+.git/
+.gitignore
+.github/
+.gitlab/
+.editorconfig
+
+# Ignore Docker-related files (avoid conflicts)
+Dockerfile
+docker-compose.yml
