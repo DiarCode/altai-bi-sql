@@ -29,14 +29,14 @@ function onPick(id: string) {
 	<DropdownMenu>
 		<DropdownMenuTrigger>
 			<img
-				class="size-12 rounded-full border border-white/50"
+				class="size-11 rounded-md border border-white/50"
 				:src="selected.src"
 				:alt="selected.title"
 			/>
 		</DropdownMenuTrigger>
 
 		<DropdownMenuContent
-			class="w-[440px] rounded-2xl border border-white/20 bg-white/10 p-3 backdrop-blur-xl text-white"
+			class="rounded-2xl border border-white/20 bg-white/10 p-3 backdrop-blur-xl text-white"
 		>
 			<!-- Grid previews -->
 			<div class="grid grid-cols-2 gap-3">
@@ -53,7 +53,7 @@ function onPick(id: string) {
 						:alt="bg.title"
 					/>
 
-					<p class="text-sm font-semibold leading-tight mt-2 text-slate-200">{{ bg.title }}</p>
+					<p class="text-sm font-medium leading-tight mt-2 text-slate-200">{{ bg.title }}</p>
 
 					<div
 						v-if="selected.id === bg.id"

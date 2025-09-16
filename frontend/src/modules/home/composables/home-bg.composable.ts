@@ -5,7 +5,7 @@ import BG_AURORA from '@/core/assets/home/aurora.jpg'
 import BG_CITY from '@/core/assets/home/city-blue.jpg'
 import BG_DESERT from '@/core/assets/home/desert-dusk.jpg'
 import BG_SPACE from '@/core/assets/home/earth-space.jpg'
-import BG_FOREST from '@/core/assets/home/forest-fog.avif'
+import BG_FOREST from '@/core/assets/home/earth-space.jpg'
 import BG_MOUNTAIN from '@/core/assets/home/mountain-lake.jpg'
 import BG_OCEAN from '@/core/assets/home/ocean-waves.jpg'
 

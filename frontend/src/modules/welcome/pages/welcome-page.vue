@@ -1,10 +1,16 @@
 <script setup lang="ts">
-import { ArrowRight, Sparkles, BarChart3, Shield } from 'lucide-vue-next'
-import { useRouter } from 'vue-router'
+import { ArrowRight, BarChart3, Shield, Sparkles } from 'lucide-vue-next';
+import { useRouter } from 'vue-router';
 
-import BG_URL from '@/core/assets/images/home-bg.jpg'
-import { Button } from '@/core/components/ui/button'
-import { Card } from '@/core/components/ui/card'
+
+
+import BG_URL from '@/core/assets/home/earth-space.jpg';
+import { Button } from '@/core/components/ui/button';
+import { Card } from '@/core/components/ui/card';
+
+
+
+
 
 const router = useRouter()
 
@@ -27,9 +33,12 @@ const goToRegister = () => router.push('/auth/register')
 				<!-- Hero Section -->
 				<div class="text-center mb-12">
 					<h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-						Business<span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">AI</span>
+						Business<span
+							class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400"
+							>AI</span
+						>
 					</h1>
-					
+
 					<p class="text-xl md:text-2xl text-slate-300 mb-8 max-w-3xl mx-auto leading-relaxed">
 						Transform your business questions into powerful analytics with artificial intelligence
 					</p>
@@ -38,7 +47,9 @@ const goToRegister = () => router.push('/auth/register')
 				<!-- Features Grid -->
 				<div class="grid md:grid-cols-3 gap-6 mb-12">
 					<!-- Feature 1 -->
-					<Card class="p-6 border border-white/20 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-lg">
+					<Card
+						class="p-6 border border-white/20 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-lg"
+					>
 						<div class="flex items-center gap-3 mb-4">
 							<div class="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
 								<BarChart3 class="w-5 h-5 text-blue-400" />
@@ -51,7 +62,9 @@ const goToRegister = () => router.push('/auth/register')
 					</Card>
 
 					<!-- Feature 2 -->
-					<Card class="p-6 border border-white/20 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-lg">
+					<Card
+						class="p-6 border border-white/20 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-lg"
+					>
 						<div class="flex items-center gap-3 mb-4">
 							<div class="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
 								<Sparkles class="w-5 h-5 text-emerald-400" />
@@ -59,12 +72,15 @@ const goToRegister = () => router.push('/auth/register')
 							<h3 class="text-lg font-semibold text-white">AI Assistant</h3>
 						</div>
 						<p class="text-slate-300 text-sm leading-relaxed">
-							Powerful artificial intelligence understands your business context and provides insights
+							Powerful artificial intelligence understands your business context and provides
+							insights
 						</p>
 					</Card>
 
 					<!-- Feature 3 -->
-					<Card class="p-6 border border-white/20 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-lg">
+					<Card
+						class="p-6 border border-white/20 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-lg"
+					>
 						<div class="flex items-center gap-3 mb-4">
 							<div class="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
 								<Shield class="w-5 h-5 text-purple-400" />
@@ -78,14 +94,16 @@ const goToRegister = () => router.push('/auth/register')
 				</div>
 
 				<!-- CTA Section -->
-				<Card class="p-8 border border-white/20 bg-gradient-to-br from-white/15 to-white/5 backdrop-blur-lg text-center">
+				<Card
+					class="p-8 border border-white/20 bg-gradient-to-br from-white/15 to-white/5 backdrop-blur-lg text-center"
+				>
 					<h2 class="text-2xl md:text-3xl font-bold text-white mb-4">
 						Ready to start working with data?
 					</h2>
 					<p class="text-slate-300 text-lg mb-8 max-w-2xl mx-auto">
 						Join thousands of companies already using BusinessAI to make data-driven decisions
 					</p>
-					
+
 					<div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
 						<Button
 							@click="goToRegister"
@@ -97,7 +115,7 @@ const goToRegister = () => router.push('/auth/register')
 								<ArrowRight class="w-4 h-4" />
 							</span>
 						</Button>
-						
+
 						<Button
 							@click="goToLogin"
 							size="lg"
@@ -111,9 +129,7 @@ const goToRegister = () => router.push('/auth/register')
 
 				<!-- Footer -->
 				<div class="mt-12 text-center">
-					<p class="text-slate-400 text-sm">
-						© 2025 BusinessAI. Altai Team.
-					</p>
+					<p class="text-slate-400 text-sm">© 2025 BusinessAI. Altai Team.</p>
 				</div>
 			</div>
 		</main>

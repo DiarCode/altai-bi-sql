@@ -47,7 +47,7 @@ const numericCols = computed<Set<string>>(() => {
 			</p>
 		</div>
 
-		<div class="space-y-12">
+		<div class="space-y-10 sm:space-y-12">
 			<!-- Loading -->
 			<div
 				v-if="bundle.request.status === 'pending'"
@@ -136,7 +136,7 @@ const numericCols = computed<Set<string>>(() => {
 									<TableHead
 										v-for="col in bundle.response.columns"
 										:key="col"
-										class="px-4 py-3 text-left font-bold text-white text-base uppercase tracking-wide"
+										class="px-4 py-3 text-left font-bold text-white text-base"
 										:class="numericCols.has(col) ? 'text-right' : 'text-left'"
 									>
 										{{ col }}

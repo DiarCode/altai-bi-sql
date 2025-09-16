@@ -4,6 +4,7 @@ import { storeToRefs } from "pinia";
 import { computed, ref } from 'vue';
 
 
+
 import { Avatar, AvatarFallback } from "@/core/components/ui/avatar";
 import { Button } from '@/core/components/ui/button';
 import { Card } from '@/core/components/ui/card';
@@ -14,15 +15,16 @@ import DropdownMenuSeparator from "@/core/components/ui/dropdown-menu/DropdownMe
 
 
 import BackgroundImagePicker from "@/modules/home/components/background-image-picker.vue";
+import HomeNavSheet from "@/modules/home/components/home-nav-sheet.vue";
 import { useBackgroundImage } from "@/modules/home/composables/home-bg.composable";
 
 
 
+import DatabaseModal from '../components/home-database-modal.vue';
 import RequestComposer from '../components/home-request-composer.vue';
 import RequestHistory from '../components/home-request-history.vue';
 import WorkspaceModal from '../components/home-workspace-modal.vue';
-import DatabaseModal from '../components/home-database-modal.vue';
-import { useBiRequests, useWorkspaces, useDatabaseConnection } from '../composables/bi.composables';
+import { useBiRequests, useDatabaseConnection, useWorkspaces } from '../composables/bi.composables';
 import type { Purpose } from '../models/bi.models';
 
 
@@ -86,120 +88,147 @@ const bgStyle = computed(() => ({ backgroundImage: `url(${selectedBgUrl.value})`
 			class="absolute inset-0 bg-gradient-to-br from-slate-950/50 via-slate-900/40 to-blue-950/30"
 		/>
 
-		<div class="absolute right-6 bottom-6">
+		<div class="hidden sm:block absolute right-6 bottom-6">
 			<BackgroundImagePicker />
 		</div>
 
-		<main class="relative z-10 mx-auto flex max-w-5xl flex-col items-center px-4 sm:px-6 py-8">
+		<main
+			class="relative z-10 mx-auto flex max-w-5xl flex-col items-center px-4 sm:px-6  py-6 sm:py-8"
+		>
 			<!-- Enhanced Header with better typography -->
-			<div class="mb-10 w-full">
-				<div class="flex gap-2 items-center justify-center">
-					<DropdownMenu>
-						<DropdownMenuTrigger>
-							<button
-								class="cursor-pointer inline-flex items-center gap-4 rounded-2xl border border-white/10 bg-white/10 px-3 py-3 backdrop-blur-lg"
-								title="Workspace"
-							>
-								<div class="flex items-center gap-2">
-									<span class="h-2 w-2 rounded-full bg-blue-400 animate-pulse" />
-									<span class="text-sm font-semibold text-white">Workspace</span>
-								</div>
-								<span class="text-sm font-mono font-bold text-blue-100">{{ workspaceName }}</span>
+			<div class="mb-4 sm:mb-10 w-full">
+				<div class="hidden sm:flex gap-2 items-center justify-center sm:flex-row flex-col">
+					<div class="flex items-center gap-2">
+						<DropdownMenu>
+							<DropdownMenuTrigger>
+								<button
+									class="cursor-pointer inline-flex items-center gap-4 rounded-2xl border border-white/10 bg-white/10 px-3 py-3 backdrop-blur-lg"
+									title="Workspace"
+								>
+									<div class="flex items-center gap-2">
+										<span class="h-2 w-2 rounded-full bg-blue-400 animate-pulse " />
+										<span class="text-sm font-semibold text-white hidden sm:inline">Workspace</span>
+									</div>
+									<span
+										class="text-sm font-mono font-bold text-blue-100 truncate"
+										>{{ workspaceName }}</span
+									>
 
-								<ChevronDown class="text-slate-500 size-4" />
-							</button>
-						</DropdownMenuTrigger>
+									<ChevronDown class="text-slate-500 size-4" />
+								</button>
+							</DropdownMenuTrigger>
 
-						<DropdownMenuContent class="bg-slate-600/5 border border-white/15 backdrop-blur-md">
-							<DropdownMenuGroup>
-								<DropdownMenuLabel class="text-slate-400">Рабочие места</DropdownMenuLabel>
+							<DropdownMenuContent class="bg-slate-600/5 border border-white/15 backdrop-blur-md">
+								<DropdownMenuGroup>
+									<DropdownMenuLabel class="text-slate-400">Рабочие места</DropdownMenuLabel>
+
+									<DropdownMenuItem
+										v-for="workspace in workspaces"
+										:key="workspace.id"
+										class="cursor-pointer hover:bg-slate-500/10! hover:text-slate-200/80! text-slate-200 transition-all duration-300"
+										:class="{ 'bg-slate-500/20': activeWorkspace?.id === workspace.id }"
+										@click="switchWorkspace(workspace.id)"
+									>
+										<div class="flex items-center justify-between w-full">
+											<span>{{ workspace.name }}</span>
+											<span
+												v-if="activeWorkspace?.id === workspace.id"
+												class="text-blue-400 text-xs"
+												>●</span
+											>
+										</div>
+									</DropdownMenuItem>
+								</DropdownMenuGroup>
+
+								<DropdownMenuSeparator class="bg-slate-300" />
 
 								<DropdownMenuItem
-									v-for="workspace in workspaces"
-									:key="workspace.id"
 									class="cursor-pointer hover:bg-slate-500/10! hover:text-slate-200/80! text-slate-200 transition-all duration-300"
-									:class="{ 'bg-slate-500/20': activeWorkspace?.id === workspace.id }"
-									@click="switchWorkspace(workspace.id)"
+									@click="showWorkspaceModal = true"
 								>
-									<div class="flex items-center justify-between w-full">
-										<span>{{ workspace.name }}</span>
-										<span v-if="activeWorkspace?.id === workspace.id" class="text-blue-400 text-xs">●</span>
-									</div>
+									<Plus class="size-5 text-slate-200" /> Добавить
 								</DropdownMenuItem>
-							</DropdownMenuGroup>
+							</DropdownMenuContent>
+						</DropdownMenu>
 
-							<DropdownMenuSeparator class="bg-slate-300" />
-
-							<DropdownMenuItem
-								class="cursor-pointer hover:bg-slate-500/10! hover:text-slate-200/80! text-slate-200 transition-all duration-300"
-								@click="showWorkspaceModal = true"
-							>
-								<Plus class="size-5 text-slate-200" /> Добавить
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
-
-					<DropdownMenu>
-						<DropdownMenuTrigger>
-							<button
-								class="cursor-pointer inline-flex items-center gap-4 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur-md"
-								title="Database Connection"
-							>
-								<div class="flex items-center gap-2">
+						<DropdownMenu>
+							<DropdownMenuTrigger>
+								<button
+									class="cursor-pointer inline-flex items-center gap-4 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur-md"
+									title="Database Connection"
+								>
+									<div class="flex items-center gap-2">
+										<span
+											class="h-2 w-2 rounded-full animate-pulse"
+											:class="connectedReadonly ? 'bg-emerald-400' : 'bg-rose-400'"
+										/>
+										<span class="text-sm font-semibold text-white hidden sm:inline">Database</span>
+									</div>
 									<span
-										class="h-2 w-2 rounded-full animate-pulse"
-										:class="connectedReadonly ? 'bg-emerald-400' : 'bg-rose-400'"
-									/>
-									<span class="text-sm font-semibold text-white">Database</span>
-								</div>
-								<span
-									class="text-sm font-semibold"
-									:class="connectedReadonly ? 'text-emerald-300' : 'text-rose-300'"
+										class="text-sm font-semibold"
+										:class="connectedReadonly ? 'text-emerald-300' : 'text-rose-300'"
+									>
+										{{ connectedReadonly ? 'Connected' : 'Disconnected' }}
+									</span>
+									<ChevronDown class="text-slate-500 size-4" />
+								</button>
+							</DropdownMenuTrigger>
+
+							<DropdownMenuContent class="bg-slate-600/5 border border-white/15 backdrop-blur-md">
+								<DropdownMenuItem
+									v-if="!connectedReadonly"
+									class="cursor-pointer hover:bg-slate-500/10! hover:text-slate-200/80! text-slate-200 transition-all duration-300"
+									@click="showDatabaseModal = true"
 								>
-									{{ connectedReadonly ? 'Connected' : 'Disconnected' }}
-								</span>
-								<ChevronDown class="text-slate-500 size-4" />
-							</button>
-						</DropdownMenuTrigger>
+									<Plus class="size-5 text-slate-200" /> Добавить
+								</DropdownMenuItem>
 
-						<DropdownMenuContent class="bg-slate-600/5 border border-white/15 backdrop-blur-md">
-							<DropdownMenuItem
-								v-if="!connectedReadonly"
-								class="cursor-pointer hover:bg-slate-500/10! hover:text-slate-200/80! text-slate-200 transition-all duration-300"
-								@click="showDatabaseModal = true"
-							>
-								<Plus class="size-5 text-slate-200" /> Добавить
-							</DropdownMenuItem>
-
-							<DropdownMenuItem
-								v-if="connectedReadonly"
-								class="cursor-pointer hover:bg-slate-500/10! hover:text-slate-200/80! text-slate-200 transition-all duration-300"
-								@click="showDatabaseModal = true"
-							>
-								<Pencil class="size-5 text-slate-200" /> Изменить
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
-
-					<DropdownMenu>
-						<DropdownMenuTrigger>
-							<Avatar class="size-11 rounded-md">
-								<AvatarFallback
-									class="bg-white/10 rounded-md border border-white/15 backdrop-blur-md text-white text-sm"
-									>CN</AvatarFallback
+								<DropdownMenuItem
+									v-if="connectedReadonly"
+									class="cursor-pointer hover:bg-slate-500/10! hover:text-slate-200/80! text-slate-200 transition-all duration-300"
+									@click="showDatabaseModal = true"
 								>
-							</Avatar>
-						</DropdownMenuTrigger>
+									<Pencil class="size-5 text-slate-200" /> Изменить
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					</div>
 
-						<DropdownMenuContent class=" bg-slate-500/5 border border-white/15 backdrop-blur-md">
-							<DropdownMenuItem
-								class="text-destructive cursor-pointer hover:bg-slate-500/10! hover:text-destructive/80! transition-all duration-300"
-							>
-								<LogOut class="text-destructive size-5" /> Выйти
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
+					<div class="flex items-center gap-2">
+						<DropdownMenu>
+							<DropdownMenuTrigger>
+								<Avatar class="size-11 rounded-md">
+									<AvatarFallback
+										class="bg-white/10 rounded-md border border-white/15 backdrop-blur-md text-white text-sm"
+										>CN</AvatarFallback
+									>
+								</Avatar>
+							</DropdownMenuTrigger>
+
+							<DropdownMenuContent class=" bg-slate-500/5 border border-white/15 backdrop-blur-md">
+								<DropdownMenuItem
+									class="text-destructive cursor-pointer hover:bg-slate-500/10! hover:text-destructive/80! transition-all duration-300"
+								>
+									<LogOut class="text-destructive size-5" /> Выйти
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+
+						<BackgroundImagePicker class="block sm:hidden" />
+					</div>
 				</div>
+
+				<HomeNavSheet
+					class="sm:hidden"
+					:workspaces="workspaces"
+					:activeWorkspaceId="activeWorkspace?.id"
+					:connectedReadonly="connectedReadonly"
+					:workspaceName="workspaceName"
+					@switchWorkspace="switchWorkspace"
+					@openWorkspaceModal="showWorkspaceModal = true"
+					@openDatabaseModal="showDatabaseModal = true"
+					@logout="() => null"
+				/>
 			</div>
 
 			<!-- Enhanced Glass card container -->
@@ -229,16 +258,12 @@ const bgStyle = computed(() => ({ backgroundImage: `url(${selectedBgUrl.value})`
 
 					<!-- Enhanced footer -->
 					<div class="mt-12 rounded-3xl bg-gradient-to-r from-white/5 to-transparent p-6">
-						<div class="flex items-center justify-between">
-							<div class="space-y-1">
-								<p class="text-sm font-medium text-slate-200">
-									Results limited to 100 rows for optimal performance
-								</p>
-								<p class="text-xs text-slate-400">Enterprise plans support unlimited data export</p>
-							</div>
+						<div class="flex items-center justify-between gap-4">
+							<p class="text-sm font-medium text-slate-200">Results limited to 100 rows</p>
+
 							<Button
 								variant="ghost"
-								size="lg"
+								size="sm"
 								class="text-slate-200 hover:text-white hover:bg-white/10 font-semibold transition-all duration-300"
 								@click="clearHistory"
 							>
