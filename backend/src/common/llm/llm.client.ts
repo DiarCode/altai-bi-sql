@@ -8,7 +8,7 @@ export interface LlmMessage {
 }
 
 export interface LlmCompletionRequest {
-	model: string
+	model?: string
 	messages: LlmMessage[]
 	max_completion_tokens?: number
 	temperature?: number
@@ -40,31 +40,49 @@ export class LlmClientService {
 	}
 
 	async completions(req: LlmCompletionRequest, retries = 2): Promise<LlmCompletionResponse> {
-		const url = `${this.baseUrl}/v1/completions`
-		const body = {
-			model: req.model || this.config.LLM.model,
+		const model = req.model || this.config.LLM.model
+		const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+		const apiKey = this.config.LLM.apiKey
+		if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`
+
+		const endpoints = [`${this.baseUrl}/v1/chat/completions`, `${this.baseUrl}/v1/completions`]
+
+		// Build payloads for each endpoint style
+		const chatPayload = {
+			model,
 			messages: req.messages,
-			max_completion_tokens: req.max_completion_tokens ?? this.config.LLM.maxTokens,
+			max_tokens: req.max_completion_tokens ?? this.config.LLM.maxTokens,
 			temperature: req.temperature ?? 0,
 			stream: req.stream ?? false,
-			response_format: req.response_format ?? { type: 'text' },
+			...(req.response_format ? { response_format: req.response_format } : {}),
+		}
+		const plainPrompt = req.messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n')
+		const completionPayload = {
+			model,
+			prompt: plainPrompt,
+			max_tokens: req.max_completion_tokens ?? this.config.LLM.maxTokens,
+			temperature: req.temperature ?? 0,
+			stream: req.stream ?? false,
 		}
 
 		for (let attempt = 0; attempt <= retries; attempt++) {
-			try {
-				const res = await fetch(url, {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-					},
-					body: JSON.stringify(body),
-				})
-				if (!res.ok) throw new Error(`LLM HTTP ${res.status}`)
-				const json = (await res.json()) as LlmCompletionResponse
-				return json
-			} catch (err) {
-				if (attempt === retries) throw err
-				await new Promise(r => setTimeout(r, 500 * (attempt + 1)))
+			for (const [i, url] of endpoints.entries()) {
+				try {
+					const body = i === 0 ? chatPayload : completionPayload
+					const res = await fetch(url, {
+						method: 'POST',
+						headers,
+						body: JSON.stringify(body),
+					})
+					if (!res.ok) throw new Error(`LLM HTTP ${res.status}`)
+					const json = (await res.json()) as LlmCompletionResponse
+					return json
+				} catch (err) {
+					// try next endpoint or retry
+					if (i < endpoints.length - 1) continue
+					if (attempt === retries) throw err
+					await new Promise(r => setTimeout(r, 500 * (attempt + 1)))
+				}
 			}
 		}
 		throw new Error('LLM request failed')

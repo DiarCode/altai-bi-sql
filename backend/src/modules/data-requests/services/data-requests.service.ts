@@ -57,13 +57,30 @@ export class DataRequestsService {
 
 		// 2. Build and call LLM for SQL
 		const sqlPrompt = this.promptBuilder.buildSqlPrompt(prompt, metadata, foreignKeys)
-		const sqlResp = await this.llm.completions({
-			model: 'llama-4-scout',
-			messages: sqlPrompt.messages,
-			max_completion_tokens: sqlPrompt.maxTokens,
-		})
-		const sql =
-			LlmClientService.firstText(sqlResp)?.trim() || (await this.generateSqlStub(workspaceId))
+		let sql: string | undefined
+		try {
+			const sqlResp = await this.llm.completions({
+				messages: sqlPrompt.messages,
+				max_completion_tokens: sqlPrompt.maxTokens,
+				response_format: { type: 'json_object' },
+			})
+			const raw = LlmClientService.firstText(sqlResp)?.trim()
+			if (raw) {
+				const cleaned = this.stripCodeFences(raw)
+				try {
+					const obj = JSON.parse(cleaned) as { sql?: unknown }
+					if (obj && typeof obj === 'object' && typeof obj.sql === 'string') {
+						sql = obj.sql.trim()
+					}
+				} catch {
+					// fall back to plain text if model returned raw SQL
+					sql = cleaned
+				}
+			}
+		} catch {
+			// ignore LLM 4xx/5xx and fallback
+		}
+		if (!sql) sql = await this.generateSqlStub(workspaceId)
 		// 3. Guard and rewrite
 		const allowedSchemas = Array.from(new Set(metadata.map(t => t.schemaName)))
 		const dialect = ds.type === 'POSTGRESQL' ? ('postgresql' as const) : ('mysql' as const)
@@ -97,7 +114,6 @@ export class DataRequestsService {
 		try {
 			const resultTextPrompt = this.promptBuilder.buildResultTextPrompt(rows)
 			const resultTextResp = await this.llm.completions({
-				model: 'llama-4-scout',
 				messages: resultTextPrompt.messages,
 				max_completion_tokens: resultTextPrompt.maxTokens,
 			})
@@ -112,12 +128,11 @@ export class DataRequestsService {
 		try {
 			const graphPrompt = this.promptBuilder.buildGraphConfigPrompt(rows)
 			const graphResp = await this.llm.completions({
-				model: 'llama-4-scout',
 				messages: graphPrompt.messages,
 				max_completion_tokens: graphPrompt.maxTokens,
 				response_format: { type: 'json_object' },
 			})
-			const graphText = LlmClientService.firstText(graphResp)
+			const graphText = this.stripCodeFences(LlmClientService.firstText(graphResp) || '')
 			if (graphText) {
 				try {
 					const parsed: unknown = JSON.parse(graphText)
@@ -240,6 +255,13 @@ export class DataRequestsService {
 			.map(c => `${table.schemaName}.${table.tableName}.${c.columnName}`)
 			.join(', ')
 		return `SELECT ${selected || '*'} FROM ${table.schemaName}.${table.tableName}`
+	}
+
+	private stripCodeFences(s: string): string {
+		const fence = /^```[a-zA-Z0-9]*\n([\s\S]*?)\n```$/
+		const m = s.match(fence)
+		if (m) return m[1].trim()
+		return s
 	}
 
 	private limitRowsAndSize(

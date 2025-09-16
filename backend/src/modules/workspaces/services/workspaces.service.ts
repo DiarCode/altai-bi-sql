@@ -115,7 +115,12 @@ export class WorkspacesService {
 		// First check ownership
 		await this.getWorkspaceById(workspaceId, userId)
 
-		const encryptedConfig = this.encryptionService.encrypt(JSON.stringify(dto.config))
+		// Normalize config to strict types (e.g., coerce port from string to number)
+		const normalizedConfig =
+			dto.type === DATA_SOURCE_TYPE.POSTGRESQL
+				? this.normalizePostgresConfig(dto.config)
+				: this.normalizeMysqlConfig(dto.config)
+		const encryptedConfig = this.encryptionService.encrypt(JSON.stringify(normalizedConfig))
 
 		const existing = await this.prisma.workspaceDataSource.findFirst({
 			where: { workspaceId },
@@ -141,6 +146,67 @@ export class WorkspacesService {
 
 		// Kick off background ingestion (non-blocking)
 		this.startIngestion(workspaceId, userId).catch(() => undefined)
+	}
+
+	private normalizePostgresConfig(x: unknown): PostgresConfig {
+		if (!x || typeof x !== 'object') {
+			throw new NotFoundException('Invalid Postgres config payload')
+		}
+		const obj = x as Record<string, unknown>
+		const portRaw = obj.port
+		const portNum = typeof portRaw === 'number' ? portRaw : Number(portRaw)
+		if (!Number.isFinite(portNum)) throw new NotFoundException('Invalid Postgres port')
+		const host = obj.host
+		const database = obj.database
+		const user = obj.user
+		const password = obj.password
+		if (
+			typeof host !== 'string' ||
+			typeof database !== 'string' ||
+			typeof user !== 'string' ||
+			typeof password !== 'string'
+		) {
+			throw new NotFoundException('Invalid Postgres config fields')
+		}
+		const sslVal = obj.ssl
+		const ssl = typeof sslVal === 'boolean' ? sslVal : sslVal === 'true'
+		return {
+			host,
+			port: portNum,
+			database,
+			user,
+			password,
+			ssl,
+		}
+	}
+
+	private normalizeMysqlConfig(x: unknown): MysqlConfig {
+		if (!x || typeof x !== 'object') {
+			throw new NotFoundException('Invalid MySQL config payload')
+		}
+		const obj = x as Record<string, unknown>
+		const portRaw = obj.port
+		const portNum = typeof portRaw === 'number' ? portRaw : Number(portRaw)
+		if (!Number.isFinite(portNum)) throw new NotFoundException('Invalid MySQL port')
+		const host = obj.host
+		const database = obj.database
+		const user = obj.user
+		const password = obj.password
+		if (
+			typeof host !== 'string' ||
+			typeof database !== 'string' ||
+			typeof user !== 'string' ||
+			typeof password !== 'string'
+		) {
+			throw new NotFoundException('Invalid MySQL config fields')
+		}
+		return {
+			host,
+			port: portNum,
+			database,
+			user,
+			password,
+		}
 	}
 
 	async startIngestion(workspaceId: number, userId: number): Promise<{ ingestionId: number }> {
@@ -254,134 +320,180 @@ export class WorkspacesService {
 				: this.asMysqlConfigOrThrow(parsed)
 		const meta = await this.schemaReader.read(ds.type, cfg)
 
-		await this.prisma.$transaction(async tx => {
-			await tx.dataTable.deleteMany({ where: { workspaceId } })
-
-			const tableMap = new Map<string, number>()
-			const perTableColumnBusiness = new Map<
-				string,
-				Record<string, { name?: string; description?: string }>
-			>()
-			for (const t of meta.tables) {
-				// Call LLM to generate business-friendly names/descriptions for this table and its columns
-				const colsForTable = meta.columns.filter(
-					c => c.schemaName === t.schemaName && c.tableName === t.tableName,
-				)
-				let businessName: string | undefined
-				let tableDescription: string | undefined
-				const columnBusiness: Record<string, { name?: string; description?: string }> = {}
-
-				try {
-					const prompt = this.prompts.buildBusinessNamesPrompt(
-						t.schemaName,
-						t.tableName,
-						colsForTable.map(c => ({
-							columnName: c.columnName,
-							dataType: c.dataType,
-							isPrimaryKey: c.isPrimaryKey,
-							isNullable: c.isNullable,
-						})),
-					)
-					const resp = await this.llm.completions({
-						model: 'llama-4-scout',
-						messages: prompt.messages,
-						max_completion_tokens: prompt.maxTokens,
-						response_format: { type: 'json_object' },
-					})
-					const text = LlmClientService.firstText(resp)
-					if (text) {
-						try {
-							interface BusinessNamesJson {
-								table?: { businessName?: unknown; description?: unknown }
-								columns?: Array<{
-									columnName?: unknown
-									businessName?: unknown
-									description?: unknown
-								}>
-							}
-							const parsed: unknown = JSON.parse(text)
-							const obj = parsed as BusinessNamesJson
-							if (obj && typeof obj === 'object') {
-								const tInfo = obj.table
-								if (tInfo && typeof tInfo === 'object') {
-									if (typeof tInfo.businessName === 'string') {
-										businessName = tInfo.businessName
-									}
-									if (typeof tInfo.description === 'string') {
-										tableDescription = tInfo.description
-									}
-								}
-								if (Array.isArray(obj.columns)) {
-									for (const col of obj.columns) {
-										const cname = typeof col?.columnName === 'string' ? col.columnName : undefined
-										if (cname) {
-											const entry: { name?: string; description?: string } = {}
-											if (typeof col.businessName === 'string') entry.name = col.businessName
-											if (typeof col.description === 'string') entry.description = col.description
-											columnBusiness[cname] = entry
-										}
-									}
-								}
-							}
-						} catch {
-							// ignore
-						}
-					}
-				} catch {
-					// ignore LLM errors; fall back to undefined business names
-				}
-
-				const rec = await tx.dataTable.create({
-					data: {
-						workspaceId,
-						schemaName: t.schemaName,
-						tableName: t.tableName,
-						businessName: businessName,
-						description: tableDescription,
-					},
-				})
-				tableMap.set(`${t.schemaName}.${t.tableName}`, rec.id)
-				perTableColumnBusiness.set(`${t.schemaName}.${t.tableName}`, columnBusiness)
+		// Deduplicate columns (information_schema joins can produce duplicates)
+		const dedupColumns: typeof meta.columns = []
+		const colSeen = new Map<string, number>()
+		for (const c of meta.columns) {
+			const key = `${c.schemaName}.${c.tableName}.${c.columnName}`
+			const idx = colSeen.get(key)
+			if (idx === undefined) {
+				colSeen.set(key, dedupColumns.length)
+				dedupColumns.push({ ...c })
+			} else {
+				// merge flags (prefer true for isPrimaryKey; isNullable true if any says true)
+				dedupColumns[idx].isPrimaryKey = dedupColumns[idx].isPrimaryKey || c.isPrimaryKey
+				dedupColumns[idx].isNullable = dedupColumns[idx].isNullable || c.isNullable
+				// keep dataType from first occurrence
 			}
+		}
 
-			const columnKeyToId = new Map<string, number>()
-			for (const c of meta.columns) {
-				const tableId = tableMap.get(`${c.schemaName}.${c.tableName}`)
-				if (!tableId) continue
-				const tableKey = `${c.schemaName}.${c.tableName}`
-				const colBizMap = perTableColumnBusiness.get(tableKey)
-				const colBiz = colBizMap ? colBizMap[c.columnName] : undefined
-				const col = await tx.dataColumn.create({
-					data: {
-						tableId,
+		// Deduplicate FKs by unique from-column key to align with our model uniqueness
+		const dedupFks: typeof meta.fks = []
+		const fkSeen = new Set<string>()
+		for (const f of meta.fks) {
+			const key = `${f.fromSchema}.${f.fromTable}.${f.fromColumn}`
+			if (fkSeen.has(key)) continue
+			fkSeen.add(key)
+			dedupFks.push(f)
+		}
+
+		// Pre-compute business metadata with LLM OUTSIDE of the DB transaction to avoid timeouts
+		type ColumnBiz = { name?: string; description?: string }
+		type TableBiz = {
+			businessName?: string
+			description?: string
+			columns: Record<string, ColumnBiz>
+		}
+		const tableBizMap = new Map<string, TableBiz>()
+		for (const t of meta.tables) {
+			const colsForTable = dedupColumns.filter(
+				c => c.schemaName === t.schemaName && c.tableName === t.tableName,
+			)
+			let businessName: string | undefined
+			let tableDescription: string | undefined
+			const columnBusiness: Record<string, ColumnBiz> = {}
+
+			try {
+				const prompt = this.prompts.buildBusinessNamesPrompt(
+					t.schemaName,
+					t.tableName,
+					colsForTable.map(c => ({
 						columnName: c.columnName,
 						dataType: c.dataType,
-						isNullable: c.isNullable,
 						isPrimaryKey: c.isPrimaryKey,
-						businessName: colBiz?.name,
-						description: colBiz?.description,
-					},
+						isNullable: c.isNullable,
+					})),
+				)
+				const resp = await this.llm.completions({
+					messages: prompt.messages,
+					max_completion_tokens: prompt.maxTokens,
 				})
-				columnKeyToId.set(`${c.schemaName}.${c.tableName}.${c.columnName}`, col.id)
+				const txt = LlmClientService.firstText(resp)
+				if (txt) {
+					try {
+						interface BusinessNamesJson {
+							table?: { businessName?: unknown; description?: unknown }
+							columns?: Array<{
+								columnName?: unknown
+								businessName?: unknown
+								description?: unknown
+							}>
+						}
+						// Try to extract JSON if the model wrapped it in markdown
+						const clean = txt
+							.trim()
+							.replace(/^```(json)?/i, '')
+							.replace(/```$/, '')
+							.trim()
+						const parsed: unknown = JSON.parse(clean)
+						const obj = parsed as BusinessNamesJson
+						if (obj && typeof obj === 'object') {
+							const tInfo = obj.table
+							if (tInfo && typeof tInfo === 'object') {
+								const ti = tInfo as { businessName?: unknown; description?: unknown }
+								if (typeof ti.businessName === 'string') {
+									businessName = ti.businessName
+								}
+								if (typeof ti.description === 'string') {
+									tableDescription = ti.description
+								}
+							}
+							if (Array.isArray(obj.columns)) {
+								for (const col of obj.columns) {
+									const cname = typeof col?.columnName === 'string' ? col.columnName : undefined
+									if (cname) {
+										const entry: ColumnBiz = {}
+										if (typeof col.businessName === 'string') entry.name = col.businessName
+										if (typeof col.description === 'string') entry.description = col.description
+										columnBusiness[cname] = entry
+									}
+								}
+							}
+						}
+					} catch {
+						// ignore parse errors
+					}
+				}
+			} catch {
+				// ignore LLM errors; fall back to undefined business names
 			}
 
-			for (const f of meta.fks) {
-				const fromTableId = tableMap.get(`${f.fromSchema}.${f.fromTable}`)
-				const toTableId = tableMap.get(`${f.toSchema}.${f.toTable}`)
-				const fromColumnId = columnKeyToId.get(`${f.fromSchema}.${f.fromTable}.${f.fromColumn}`)
-				const toColumnId = columnKeyToId.get(`${f.toSchema}.${f.toTable}.${f.toColumn}`)
-				if (!fromTableId || !toTableId || !fromColumnId || !toColumnId) continue
-				await tx.foreignKey.create({
-					data: {
-						fromTableId,
-						fromColumnId,
-						toTableId,
-						toColumnId,
-						constraintName: f.constraintName,
-					},
-				})
-			}
-		})
+			tableBizMap.set(`${t.schemaName}.${t.tableName}`, {
+				businessName,
+				description: tableDescription,
+				columns: columnBusiness,
+			})
+		}
+
+		// Write everything in a single short-lived transaction with a higher timeout for bulk inserts
+		await this.prisma.$transaction(
+			async tx => {
+				await tx.dataTable.deleteMany({ where: { workspaceId } })
+
+				const tableMap = new Map<string, number>()
+				for (const t of meta.tables) {
+					const biz = tableBizMap.get(`${t.schemaName}.${t.tableName}`)
+					const rec = await tx.dataTable.create({
+						data: {
+							workspaceId,
+							schemaName: t.schemaName,
+							tableName: t.tableName,
+							businessName: biz?.businessName,
+							description: biz?.description,
+						},
+					})
+					tableMap.set(`${t.schemaName}.${t.tableName}`, rec.id)
+				}
+
+				const columnKeyToId = new Map<string, number>()
+				for (const c of dedupColumns) {
+					const tableId = tableMap.get(`${c.schemaName}.${c.tableName}`)
+					if (!tableId) continue
+					const biz = tableBizMap.get(`${c.schemaName}.${c.tableName}`)
+					const colBiz = biz?.columns[c.columnName]
+					const col = await tx.dataColumn.create({
+						data: {
+							tableId,
+							columnName: c.columnName,
+							dataType: c.dataType,
+							isNullable: c.isNullable,
+							isPrimaryKey: c.isPrimaryKey,
+							businessName: colBiz?.name,
+							description: colBiz?.description,
+						},
+					})
+					columnKeyToId.set(`${c.schemaName}.${c.tableName}.${c.columnName}`, col.id)
+				}
+
+				for (const f of dedupFks) {
+					const fromTableId = tableMap.get(`${f.fromSchema}.${f.fromTable}`)
+					const toTableId = tableMap.get(`${f.toSchema}.${f.toTable}`)
+					const fromColumnId = columnKeyToId.get(`${f.fromSchema}.${f.fromTable}.${f.fromColumn}`)
+					const toColumnId = columnKeyToId.get(`${f.toSchema}.${f.toTable}.${f.toColumn}`)
+					if (!fromTableId || !toTableId || !fromColumnId || !toColumnId) continue
+					await tx.foreignKey.create({
+						data: {
+							fromTableId,
+							fromColumnId,
+							toTableId,
+							toColumnId,
+							constraintName: f.constraintName,
+						},
+					})
+				}
+			},
+			{ timeout: 30000 },
+		)
 
 		await this.prisma.workspaceIngestion.update({
 			where: { id: ingestionId },
