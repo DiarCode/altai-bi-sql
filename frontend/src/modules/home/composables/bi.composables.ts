@@ -1,12 +1,61 @@
 import { ref } from 'vue'
 
-import type { BiRequest, BiResponse, RequestBundle } from '../models/bi.models'
+import type { BiRequest, BiResponse, RequestBundle, Purpose } from '../models/bi.models'
+
+interface Workspace {
+	id: string
+	name: string
+	description: string
+	purpose: Purpose
+	createdAt: string
+}
+
+interface DatabaseConnection {
+	id: string
+	dbType: 'PostgreSQL' | 'MySQL'
+	username: string
+	password: string
+	databaseName: string
+	host: string
+	port: string
+	status: 'connected' | 'disconnected' | 'error'
+	lastConnected?: string
+}
 
 const bundles = ref<RequestBundle[]>([])
 const connectedReadonly = ref<boolean>(true) // mock: show "Connected • Readonly"
-const activeWorkspace = ref<{ id: string; name: string } | null>({
-	id: 'ws_demo',
-	name: 'Demo Workspace',
+
+// Mock workspaces data
+const workspaces = ref<Workspace[]>([
+	{
+		id: 'ws_demo',
+		name: 'Demo Workspace',
+		description: 'A sample workspace for demonstration',
+		purpose: 'E_COMMERCE',
+		createdAt: new Date().toISOString(),
+	},
+	{
+		id: 'ws_analytics',
+		name: 'Analytics Dashboard',
+		description: 'Business analytics and reporting workspace',
+		purpose: 'ACCOUNTING',
+		createdAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+	}
+])
+
+const activeWorkspace = ref<Workspace | null>(workspaces.value[0])
+
+// Mock database connection
+const databaseConnection = ref<DatabaseConnection | null>({
+	id: 'conn_1',
+	dbType: 'PostgreSQL',
+	username: 'demo_user',
+	password: '***hidden***',
+	databaseName: 'analytics_db',
+	host: 'localhost',
+	port: '5432',
+	status: 'connected',
+	lastConnected: new Date().toISOString(),
 })
 
 export function useBiRequests() {
@@ -65,6 +114,76 @@ export function useBiRequests() {
 		clearHistory,
 		connectedReadonly,
 		activeWorkspace,
+		workspaces,
+		databaseConnection,
+	}
+}
+
+// Workspace management composable
+export function useWorkspaces() {
+	async function createWorkspace(data: Omit<Workspace, 'id' | 'createdAt'>) {
+		// Simulate API call
+		await new Promise(resolve => setTimeout(resolve, 1000))
+		
+		const newWorkspace: Workspace = {
+			...data,
+			id: crypto.randomUUID(),
+			createdAt: new Date().toISOString(),
+		}
+		
+		workspaces.value.unshift(newWorkspace)
+		activeWorkspace.value = newWorkspace
+		
+		return newWorkspace
+	}
+
+	function switchWorkspace(workspaceId: string) {
+		const workspace = workspaces.value.find(w => w.id === workspaceId)
+		if (workspace) {
+			activeWorkspace.value = workspace
+			// Clear history when switching workspaces
+			bundles.value = []
+		}
+	}
+
+	return {
+		workspaces,
+		activeWorkspace,
+		createWorkspace,
+		switchWorkspace,
+	}
+}
+
+// Database connection management composable
+export function useDatabaseConnection() {
+	async function updateConnection(data: Omit<DatabaseConnection, 'id' | 'status' | 'lastConnected'>) {
+		// Simulate API call
+		await new Promise(resolve => setTimeout(resolve, 1000))
+		
+		databaseConnection.value = {
+			...data,
+			id: databaseConnection.value?.id || crypto.randomUUID(),
+			status: 'connected',
+			lastConnected: new Date().toISOString(),
+		}
+		
+		connectedReadonly.value = true
+		
+		return databaseConnection.value
+	}
+
+	function disconnectDatabase() {
+		if (databaseConnection.value) {
+			databaseConnection.value.status = 'disconnected'
+		}
+		connectedReadonly.value = false
+	}
+
+	return {
+		databaseConnection,
+		connectedReadonly,
+		updateConnection,
+		disconnectDatabase,
 	}
 }
 
