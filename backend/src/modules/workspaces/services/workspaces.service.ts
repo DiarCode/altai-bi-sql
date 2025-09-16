@@ -15,6 +15,21 @@ import { DATA_SOURCE_TYPE, INGESTION_STATUS } from '@prisma/client'
 import { MysqlConfig, PostgresConfig } from '../types/data-source.types'
 import { LlmClientService } from 'src/common/llm/llm.client'
 import { PromptBuilderService } from 'src/common/llm/prompt.builder'
+import {
+	asMysqlConfigOrThrow,
+	asPostgresConfigOrThrow,
+	cleanMarkdownJson,
+	normalizeMysqlConfig,
+	normalizePostgresConfig,
+} from '../utils/workspaces.util'
+import {
+	BusinessMetadataDto,
+	BusinessTableDto,
+	BusinessColumnDto,
+	UpdateColumnBusinessDto,
+	UpdateTableBusinessDto,
+	WorkspaceIngestionDto,
+} from '../dtos/workspaces.dtos'
 
 @Injectable()
 export class WorkspacesService {
@@ -118,8 +133,8 @@ export class WorkspacesService {
 		// Normalize config to strict types (e.g., coerce port from string to number)
 		const normalizedConfig =
 			dto.type === DATA_SOURCE_TYPE.POSTGRESQL
-				? this.normalizePostgresConfig(dto.config)
-				: this.normalizeMysqlConfig(dto.config)
+				? normalizePostgresConfig(dto.config)
+				: normalizeMysqlConfig(dto.config)
 		const encryptedConfig = this.encryptionService.encrypt(JSON.stringify(normalizedConfig))
 
 		const existing = await this.prisma.workspaceDataSource.findFirst({
@@ -148,66 +163,7 @@ export class WorkspacesService {
 		this.startIngestion(workspaceId, userId).catch(() => undefined)
 	}
 
-	private normalizePostgresConfig(x: unknown): PostgresConfig {
-		if (!x || typeof x !== 'object') {
-			throw new NotFoundException('Invalid Postgres config payload')
-		}
-		const obj = x as Record<string, unknown>
-		const portRaw = obj.port
-		const portNum = typeof portRaw === 'number' ? portRaw : Number(portRaw)
-		if (!Number.isFinite(portNum)) throw new NotFoundException('Invalid Postgres port')
-		const host = obj.host
-		const database = obj.database
-		const user = obj.user
-		const password = obj.password
-		if (
-			typeof host !== 'string' ||
-			typeof database !== 'string' ||
-			typeof user !== 'string' ||
-			typeof password !== 'string'
-		) {
-			throw new NotFoundException('Invalid Postgres config fields')
-		}
-		const sslVal = obj.ssl
-		const ssl = typeof sslVal === 'boolean' ? sslVal : sslVal === 'true'
-		return {
-			host,
-			port: portNum,
-			database,
-			user,
-			password,
-			ssl,
-		}
-	}
 
-	private normalizeMysqlConfig(x: unknown): MysqlConfig {
-		if (!x || typeof x !== 'object') {
-			throw new NotFoundException('Invalid MySQL config payload')
-		}
-		const obj = x as Record<string, unknown>
-		const portRaw = obj.port
-		const portNum = typeof portRaw === 'number' ? portRaw : Number(portRaw)
-		if (!Number.isFinite(portNum)) throw new NotFoundException('Invalid MySQL port')
-		const host = obj.host
-		const database = obj.database
-		const user = obj.user
-		const password = obj.password
-		if (
-			typeof host !== 'string' ||
-			typeof database !== 'string' ||
-			typeof user !== 'string' ||
-			typeof password !== 'string'
-		) {
-			throw new NotFoundException('Invalid MySQL config fields')
-		}
-		return {
-			host,
-			port: portNum,
-			database,
-			user,
-			password,
-		}
-	}
 
 	async startIngestion(workspaceId: number, userId: number): Promise<{ ingestionId: number }> {
 		await this.getWorkspaceById(workspaceId, userId)
@@ -229,7 +185,7 @@ export class WorkspacesService {
 		return { ingestionId: ingestion.id }
 	}
 
-	async getLatestIngestion(workspaceId: number, userId: number) {
+	async getLatestIngestion(workspaceId: number, userId: number): Promise<WorkspaceIngestionDto> {
 		await this.getWorkspaceById(workspaceId, userId)
 		const ing = await this.prisma.workspaceIngestion.findFirst({
 			where: { workspaceId },
@@ -240,7 +196,7 @@ export class WorkspacesService {
 	}
 
 	// Business metadata: read
-	async getBusinessMetadata(workspaceId: number, userId: number) {
+	async getBusinessMetadata(workspaceId: number, userId: number): Promise<BusinessMetadataDto> {
 		await this.getWorkspaceById(workspaceId, userId)
 		const tables = await this.prisma.dataTable.findMany({
 			where: { workspaceId },
@@ -274,7 +230,7 @@ export class WorkspacesService {
 		userId: number,
 		tableId: number,
 		data: { businessName?: string; description?: string },
-	) {
+	): Promise<void> {
 		await this.getWorkspaceById(workspaceId, userId)
 		const existing = await this.prisma.dataTable.findFirst({ where: { id: tableId, workspaceId } })
 		if (!existing) throw new NotFoundException('Table not found')
@@ -294,7 +250,7 @@ export class WorkspacesService {
 		tableId: number,
 		columnId: number,
 		data: { businessName?: string; description?: string },
-	) {
+	): Promise<void> {
 		await this.getWorkspaceById(workspaceId, userId)
 		const existing = await this.prisma.dataColumn.findFirst({
 			where: { id: columnId, table: { id: tableId, workspaceId } },
@@ -316,8 +272,8 @@ export class WorkspacesService {
 		const parsed: unknown = JSON.parse(decrypted)
 		const cfg: PostgresConfig | MysqlConfig =
 			ds.type === DATA_SOURCE_TYPE.POSTGRESQL
-				? this.asPostgresConfigOrThrow(parsed)
-				: this.asMysqlConfigOrThrow(parsed)
+				? asPostgresConfigOrThrow(parsed)
+				: asMysqlConfigOrThrow(parsed)
 		const meta = await this.schemaReader.read(ds.type, cfg)
 
 		// Deduplicate columns (information_schema joins can produce duplicates)
@@ -390,11 +346,7 @@ export class WorkspacesService {
 							}>
 						}
 						// Try to extract JSON if the model wrapped it in markdown
-						const clean = txt
-							.trim()
-							.replace(/^```(json)?/i, '')
-							.replace(/```$/, '')
-							.trim()
+						const clean = cleanMarkdownJson(txt)
 						const parsed: unknown = JSON.parse(clean)
 						const obj = parsed as BusinessNamesJson
 						if (obj && typeof obj === 'object') {

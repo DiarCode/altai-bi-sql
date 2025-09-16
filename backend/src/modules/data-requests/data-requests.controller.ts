@@ -57,7 +57,7 @@ export class DataRequestsController {
 	async getAll(
 		@GetCurrentUser() user: UserClaims,
 		@Param('workspaceId', ParseIntPipe) workspaceId: number,
-	) {
+	): Promise<DataRequestResultDto[]> {
 		return this.service.getAll(user.id, workspaceId)
 	}
 }

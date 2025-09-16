@@ -2,7 +2,7 @@
 
 import { ApiProperty } from '@nestjs/swagger'
 import { IsString, IsNotEmpty, IsEnum, IsObject, IsOptional, IsNumber } from 'class-validator'
-import { WORKSPACE_PURPOSE, DATA_SOURCE_TYPE } from '@prisma/client'
+import { WORKSPACE_PURPOSE, DATA_SOURCE_TYPE, INGESTION_STATUS } from '@prisma/client'
 import { PostgresConfig, MysqlConfig, DataSourceConfig } from '../types/data-source.types'
 
 export class PostgresConfigDto implements PostgresConfig {
@@ -264,4 +264,25 @@ export class UpdateColumnBusinessDto {
 	@IsString()
 	@IsNotEmpty()
 	description?: string
+}
+
+// Ingestion status DTO
+export class WorkspaceIngestionDto {
+	@ApiProperty()
+	id: number
+
+	@ApiProperty()
+	workspaceId: number
+
+	@ApiProperty({ enum: INGESTION_STATUS })
+	status: INGESTION_STATUS
+
+	@ApiProperty()
+	startedAt: Date | null
+
+	@ApiProperty()
+	finishedAt: Date | null
+
+	@ApiProperty()
+	error: string | null
 }

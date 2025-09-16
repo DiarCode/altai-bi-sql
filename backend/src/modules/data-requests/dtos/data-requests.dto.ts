@@ -17,6 +17,9 @@ export class DataRequestResultDto {
 	status: string
 
 	@ApiProperty({ required: false })
+	responseId?: string
+
+	@ApiProperty({ required: false })
 	sqlScript?: string
 
 	@ApiProperty({ required: false })

@@ -21,11 +21,7 @@ import {
 	UpsertDataSourceDto,
 	WorkspaceDto,
 } from './dtos/workspaces.dtos'
-import {
-	BusinessMetadataDto,
-	UpdateTableBusinessDto,
-	UpdateColumnBusinessDto,
-} from './dtos/workspaces.dtos'
+import { BusinessMetadataDto, UpdateTableBusinessDto, UpdateColumnBusinessDto, WorkspaceIngestionDto } from './dtos/workspaces.dtos'
 import { UsersAuthGuard } from 'src/common/guards/users-auth.guard'
 
 @ApiTags('workspaces')
@@ -119,11 +115,11 @@ export class WorkspacesController {
 	}
 
 	@Get(':id/ingest/latest')
-	@ApiResponse({ status: 200, description: 'Latest ingestion status' })
+	@ApiResponse({ status: 200, description: 'Latest ingestion status', type: WorkspaceIngestionDto })
 	async getLatestIngestion(
 		@GetCurrentUser() user: UserClaims,
 		@Param('id', ParseIntPipe) id: number,
-	) {
+): Promise<WorkspaceIngestionDto> {
 		return this.workspacesService.getLatestIngestion(id, user.id)
 	}
 
