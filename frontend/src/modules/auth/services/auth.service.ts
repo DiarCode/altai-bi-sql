@@ -5,190 +5,151 @@ import type {
 	AuthResponse,
 	User
 } from '../models/auth.models'
-import { apiClient } from '@/core/configs/axios-instance.config'
 
-interface ApiError {
-	response?: {
-		data?: {
-			message?: string
-		}
-	}
-}
+// Mock storage for users
+const mockUsers: User[] = []
+let currentUser: User | null = null
 
 class AuthService {
-	private handleError(error: unknown, defaultMessage: string): string {
-		if (error && typeof error === 'object' && 'response' in error) {
-			const apiError = error as ApiError
-			return apiError.response?.data?.message || defaultMessage
+	// Mock delay to simulate API calls
+	private async mockDelay(ms = 1000): Promise<void> {
+		return new Promise(resolve => setTimeout(resolve, ms))
+	}
+
+	// Format phone number
+	private formatPhoneNumber(phone: string): string {
+		let phoneNumber = phone.replace(/\D/g, '')
+		if (phoneNumber.startsWith('8')) {
+			phoneNumber = '7' + phoneNumber.slice(1)
 		}
-		return defaultMessage
+		if (!phoneNumber.startsWith('+')) {
+			phoneNumber = '+' + phoneNumber
+		}
+		return phoneNumber
+	}
+
+	// Validate phone number
+	private isValidPhone(phone: string): boolean {
+		const phoneRegex = /^(\+7|8)[0-9]{10}$/
+		return phoneRegex.test(phone)
 	}
 
 	// Request OTP for login
 	async login(request: LoginRequest): Promise<AuthResponse> {
-		try {
-			// Basic phone number validation (Kazakhstan format)
-			const phoneRegex = /^(\+7|8)[0-9]{10}$/
-			if (!phoneRegex.test(request.phoneNumber)) {
-				return {
-					success: false,
-					message: 'Неверный формат номера телефона'
-				}
-			}
-
-			// Convert phone to E.164 format for backend
-			let phoneNumber = request.phoneNumber.replace(/\D/g, '')
-			if (phoneNumber.startsWith('8')) {
-				phoneNumber = '7' + phoneNumber.slice(1)
-			}
-			if (!phoneNumber.startsWith('+')) {
-				phoneNumber = '+' + phoneNumber
-			}
-
-			await apiClient.post('/users/otp/request', {
-				phoneNumber
-			})
-
-			return {
-				success: true,
-				message: 'SMS с кодом отправлен'
-			}
-		} catch (error: unknown) {
-			console.error('Login error:', error)
+		await this.mockDelay(800)
+		
+		if (!this.isValidPhone(request.phoneNumber)) {
 			return {
 				success: false,
-				message: this.handleError(error, 'Произошла ошибка при отправке SMS')
+				message: 'Неверный формат номера телефона'
 			}
+		}
+
+		const formattedPhone = this.formatPhoneNumber(request.phoneNumber)
+		const user = mockUsers.find(u => u.phoneNumber === formattedPhone)
+		
+		if (!user) {
+			return {
+				success: false,
+				message: 'Пользователь с таким номером не найден'
+			}
+		}
+
+		return {
+			success: true,
+			message: 'OTP код отправлен'
 		}
 	}
 
-	// Verify OTP and create session (still accepts hardcoded "1111")
+	// Verify OTP and create session (hardcoded to "1111")
 	async verifyOtp(request: OtpVerificationRequest): Promise<AuthResponse> {
-		try {
-			// Keep hardcoded OTP check as requested
-			if (request.otp !== '1111') {
-				return {
-					success: false,
-					message: 'Неверный код подтверждения'
-				}
-			}
-
-			// Convert phone to E.164 format for backend
-			let phoneNumber = request.phoneNumber.replace(/\D/g, '')
-			if (phoneNumber.startsWith('8')) {
-				phoneNumber = '7' + phoneNumber.slice(1)
-			}
-			if (!phoneNumber.startsWith('+')) {
-				phoneNumber = '+' + phoneNumber
-			}
-
-			const response = await apiClient.post('/users/otp/verify', {
-				phoneNumber,
-				code: request.otp
-			})
-
-			if (response.data.success) {
-				return {
-					success: true,
-					message: 'Авторизация успешна',
-					token: 'session-created' // Backend uses cookies, not JWT tokens
-				}
-			} else {
-				return {
-					success: false,
-					message: 'Ошибка при создании сессии'
-				}
-			}
-		} catch (error: unknown) {
-			console.error('OTP verification error:', error)
+		await this.mockDelay(500)
+		
+		// Hardcoded OTP check as requested
+		if (request.otp !== '1111') {
 			return {
 				success: false,
-				message: this.handleError(error, 'Произошла ошибка при подтверждении кода')
+				message: 'Неверный код подтверждения'
 			}
+		}
+
+		const formattedPhone = this.formatPhoneNumber(request.phoneNumber)
+		const user = mockUsers.find(u => u.phoneNumber === formattedPhone)
+		
+		if (!user) {
+			return {
+				success: false,
+				message: 'Пользователь не найден'
+			}
+		}
+
+		currentUser = user
+		
+		return {
+			success: true,
+			message: 'Авторизация успешна',
+			token: 'mock-token',
+			user
 		}
 	}
 
-	// Registration with backend API
+	// Registration with mock logic
 	async register(request: RegisterRequest): Promise<AuthResponse> {
-		try {
-			// Basic validation
-			if (!request.name.trim()) {
-				return {
-					success: false,
-					message: 'Имя обязательно для заполнения'
-				}
-			}
-
-			if (!request.carModel.trim()) {
-				return {
-					success: false,
-					message: 'Модель автомобиля обязательна для заполнения'
-				}
-			}
-
-			if (request.carYear < 1990 || request.carYear > new Date().getFullYear()) {
-				return {
-					success: false,
-					message: 'Неверный год выпуска автомобиля'
-				}
-			}
-
-			// Convert phone to E.164 format for backend
-			let phoneNumber = request.phoneNumber.replace(/\D/g, '')
-			if (phoneNumber.startsWith('8')) {
-				phoneNumber = '7' + phoneNumber.slice(1)
-			}
-			if (!phoneNumber.startsWith('+')) {
-				phoneNumber = '+' + phoneNumber
-			}
-
-			// Call backend signup endpoint
-			await apiClient.post('/users/signup', {
-				name: request.name,
-				phoneNumber,
-				city: request.city,
-				carModel: request.carModel,
-				carYear: request.carYear,
-				carColor: request.carColor,
-				vinNumber: request.carVin // Backend uses 'vinNumber' instead of 'carVin'
-			})
-
-			return {
-				success: true,
-				message: 'Регистрация успешна. SMS с кодом отправлен'
-			}
-		} catch (error: unknown) {
-			console.error('Registration error:', error)
+		await this.mockDelay(1000)
+		
+		// Basic validation
+		if (!request.fullName.trim()) {
 			return {
 				success: false,
-				message: this.handleError(error, 'Произошла ошибка при регистрации')
+				message: 'Имя обязательно для заполнения'
 			}
 		}
+
+		if (!this.isValidPhone(request.phoneNumber)) {
+			return {
+				success: false,
+				message: 'Неверный формат номера телефона'
+			}
+		}
+
+		const formattedPhone = this.formatPhoneNumber(request.phoneNumber)
+		
+		// Check if user already exists
+		const existingUser = mockUsers.find(u => u.phoneNumber === formattedPhone)
+		if (existingUser) {
+			return {
+				success: false,
+				message: 'Пользователь с таким номером уже существует'
+			}
+		}
+
+		// Create new user
+		const newUser: User = {
+			id: crypto.randomUUID(),
+			fullName: request.fullName,
+			phoneNumber: formattedPhone,
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString()
+		}
+
+		mockUsers.push(newUser)
+
+		return {
+			success: true,
+			message: 'Регистрация успешна. SMS с кодом отправлен'
+		}
 	}
 
-	// Get current user from backend
+	// Get current user
 	async getCurrentUser(): Promise<User | null> {
-		try {
-			const response = await apiClient.get<User>('/users/me')
-			return response.data
-		} catch (error: unknown) {
-			console.error('Get current user error:', error)
-			return null
-		}
+		await this.mockDelay(200)
+		return currentUser
 	}
 
-	// Logout and clear backend session
+	// Logout and clear session
 	async logout(): Promise<void> {
-		try {
-			await apiClient.post('/users/logout')
-		} catch (error: unknown) {
-			console.error('Logout error:', error)
-			// Even if logout fails on backend, we should clear local state
-		}
-
-		// Clear any local storage items (keeping for backward compatibility)
-		localStorage.removeItem('user')
-		localStorage.removeItem('token')
+		await this.mockDelay(200)
+		currentUser = null
 	}
 }
 

@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { ChevronDown, LogOut, Pencil, Plus } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
-import { computed } from 'vue';
-
+import { computed, ref } from 'vue';
 
 
 import { Avatar, AvatarFallback } from "@/core/components/ui/avatar";
@@ -21,7 +20,10 @@ import { useBackgroundImage } from "@/modules/home/composables/home-bg.composabl
 
 import RequestComposer from '../components/home-request-composer.vue';
 import RequestHistory from '../components/home-request-history.vue';
-import { useBiRequests } from '../composables/bi.composables';
+import WorkspaceModal from '../components/home-workspace-modal.vue';
+import DatabaseModal from '../components/home-database-modal.vue';
+import { useBiRequests, useWorkspaces, useDatabaseConnection } from '../composables/bi.composables';
+import type { Purpose } from '../models/bi.models';
 
 
 
@@ -32,9 +34,38 @@ const {
   submitPrompt,
   retry,
   clearHistory,
-  connectedReadonly,
-  activeWorkspace,
 } = useBiRequests();
+
+const {
+  workspaces,
+  activeWorkspace,
+  createWorkspace,
+  switchWorkspace,
+} = useWorkspaces();
+
+const {
+  connectedReadonly,
+  updateConnection,
+} = useDatabaseConnection();
+
+// Modal states
+const showWorkspaceModal = ref(false);
+const showDatabaseModal = ref(false);
+
+// Modal handlers
+async function handleCreateWorkspace(data: { name: string; description: string; purpose: Purpose }) {
+  try {
+    await createWorkspace(data);
+    showWorkspaceModal.value = false;
+  } catch (error) {
+    console.error('Failed to create workspace:', error);
+  }
+}
+
+async function handleUpdateConnection(data: { dbType: 'PostgreSQL' | 'MySQL'; username: string; password: string; databaseName: string; host: string; port: string }) {
+  await updateConnection(data);
+  showDatabaseModal.value = false;
+}
 
 const workspaceName = computed(() => activeWorkspace.value?.name ?? '—');
 
@@ -84,26 +115,24 @@ const bgStyle = computed(() => ({ backgroundImage: `url(${selectedBgUrl.value})`
 								<DropdownMenuLabel class="text-slate-400">Рабочие места</DropdownMenuLabel>
 
 								<DropdownMenuItem
-									class="cursor-pointer hover:bg-slate-500/10! hover:text-slate-200/80! text-slate-200"
+									v-for="workspace in workspaces"
+									:key="workspace.id"
+									class="cursor-pointer hover:bg-slate-500/10! hover:text-slate-200/80! text-slate-200 transition-all duration-300"
+									:class="{ 'bg-slate-500/20': activeWorkspace?.id === workspace.id }"
+									@click="switchWorkspace(workspace.id)"
 								>
-									Workpace 1
-								</DropdownMenuItem>
-								<DropdownMenuItem
-									class="cursor-pointer hover:bg-slate-500/10! hover:text-slate-200/80! text-slate-200"
-								>
-									Workpace 2
-								</DropdownMenuItem>
-								<DropdownMenuItem
-									class="cursor-pointer hover:bg-slate-500/10! hover:text-slate-200/80! text-slate-200"
-								>
-									Workpace 3
+									<div class="flex items-center justify-between w-full">
+										<span>{{ workspace.name }}</span>
+										<span v-if="activeWorkspace?.id === workspace.id" class="text-blue-400 text-xs">●</span>
+									</div>
 								</DropdownMenuItem>
 							</DropdownMenuGroup>
 
 							<DropdownMenuSeparator class="bg-slate-300" />
 
 							<DropdownMenuItem
-								class="cursor-pointer hover:bg-slate-500/10! hover:text-slate-200/80! text-slate-200"
+								class="cursor-pointer hover:bg-slate-500/10! hover:text-slate-200/80! text-slate-200 transition-all duration-300"
+								@click="showWorkspaceModal = true"
 							>
 								<Plus class="size-5 text-slate-200" /> Добавить
 							</DropdownMenuItem>
@@ -136,14 +165,16 @@ const bgStyle = computed(() => ({ backgroundImage: `url(${selectedBgUrl.value})`
 						<DropdownMenuContent class="bg-slate-600/5 border border-white/15 backdrop-blur-md">
 							<DropdownMenuItem
 								v-if="!connectedReadonly"
-								class="cursor-pointer hover:bg-slate-500/10! hover:text-slate-200/80! text-slate-200"
+								class="cursor-pointer hover:bg-slate-500/10! hover:text-slate-200/80! text-slate-200 transition-all duration-300"
+								@click="showDatabaseModal = true"
 							>
 								<Plus class="size-5 text-slate-200" /> Добавить
 							</DropdownMenuItem>
 
 							<DropdownMenuItem
 								v-if="connectedReadonly"
-								class="cursor-pointer hover:bg-slate-500/10! hover:text-slate-200/80! text-slate-200"
+								class="cursor-pointer hover:bg-slate-500/10! hover:text-slate-200/80! text-slate-200 transition-all duration-300"
+								@click="showDatabaseModal = true"
 							>
 								<Pencil class="size-5 text-slate-200" /> Изменить
 							</DropdownMenuItem>
@@ -162,7 +193,7 @@ const bgStyle = computed(() => ({ backgroundImage: `url(${selectedBgUrl.value})`
 
 						<DropdownMenuContent class=" bg-slate-500/5 border border-white/15 backdrop-blur-md">
 							<DropdownMenuItem
-								class="text-destructive cursor-pointer hover:bg-slate-500/10! hover:text-destructive/80!"
+								class="text-destructive cursor-pointer hover:bg-slate-500/10! hover:text-destructive/80! transition-all duration-300"
 							>
 								<LogOut class="text-destructive size-5" /> Выйти
 							</DropdownMenuItem>
@@ -208,7 +239,7 @@ const bgStyle = computed(() => ({ backgroundImage: `url(${selectedBgUrl.value})`
 							<Button
 								variant="ghost"
 								size="lg"
-								class="text-slate-200 hover:text-white hover:bg-white/10 font-semibold"
+								class="text-slate-200 hover:text-white hover:bg-white/10 font-semibold transition-all duration-300"
 								@click="clearHistory"
 							>
 								Clear History
@@ -218,5 +249,16 @@ const bgStyle = computed(() => ({ backgroundImage: `url(${selectedBgUrl.value})`
 				</div>
 			</Card>
 		</main>
+
+		<!-- Modals -->
+		<WorkspaceModal
+			v-model:open="showWorkspaceModal"
+			@submit="handleCreateWorkspace"
+		/>
+
+		<DatabaseModal
+			v-model:open="showDatabaseModal"
+			@submit="handleUpdateConnection"
+		/>
 	</div>
 </template>

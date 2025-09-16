@@ -238,7 +238,7 @@ const barWidth = computed(() => {
 							fill="url(#barGradient)"
 							stroke="rgba(59, 130, 246, 0.6)"
 							stroke-width="1"
-							class="hover:opacity-80 transition-opacity cursor-pointer"
+							class="hover:opacity-80 transition-opacity duration-300 cursor-pointer"
 						/>
 						<!-- Value labels on bars -->
 						<template v-for="(y, i) in points.ys">
@@ -286,7 +286,7 @@ const barWidth = computed(() => {
 							fill="white"
 							stroke="rgba(59, 130, 246, 1)"
 							stroke-width="3"
-							class="hover:r-6 transition-all cursor-pointer drop-shadow-lg"
+							class="hover:r-6 transition-all duration-300 cursor-pointer drop-shadow-lg"
 						/>
 						<!-- Value labels on hover points -->
 						<template v-for="(y, i) in points.ys">
@@ -295,7 +295,7 @@ const barWidth = computed(() => {
 								:x="points.xScale(i)"
 								:y="points.yScale(y) - 12"
 								text-anchor="middle"
-								class="text-xs font-semibold fill-white opacity-0 hover:opacity-100 transition-opacity"
+								class="text-xs font-semibold fill-white opacity-0 hover:opacity-100 transition-opacity duration-300"
 								v-if="points.ys.length <= 12"
 							>
 								{{ y.toLocaleString() }}
