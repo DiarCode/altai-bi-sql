@@ -17,15 +17,20 @@ export interface WhatsappConfig {
 	phoneId: string
 	accessToken: string
 }
-export interface OpenAIConfig {
+export interface LLMConfig {
 	apiKey: string
 	model: string // chat/completions
 	maxTokens: number
+	baseUrl: string
 }
 
 export interface SecurityConfig {
 	backendCorsOrigins: string[]
 	allowedHosts: string[]
+}
+
+export interface EncryptionConfig {
+	key: string
 }
 
 export interface S3Config {
@@ -38,10 +43,6 @@ export interface S3Config {
 	imagePrefix: string // e.g. “images/”
 	audioPrefix: string // e.g. “audio/”
 	usePathStyle: boolean
-}
-
-export interface ClassificationPipelineUrl {
-	classificationPipelineUrl: string
 }
 
 @Injectable()
@@ -84,11 +85,18 @@ export class AppConfigService {
 		}
 	}
 
-	get openai(): OpenAIConfig {
+	get LLM(): LLMConfig {
 		return {
-			apiKey: this.get<string>('OPENAI_API_KEY'),
-			model: this.get<string>('OPENAI_MODEL', 'gpt-4.1-2025-04-14'),
-			maxTokens: this.get<number>('OPENAI_MAX_TOKENS', 1000),
+			apiKey: this.get<string>('LLM_API_KEY'),
+			model: this.get<string>('LLM_MODEL', 'llama4scout'),
+			maxTokens: this.get<number>('LLM_MAX_TOKENS', 4096),
+			baseUrl: this.get<string>('LLM_BASE_URL', 'https://bkwg3037dnb7aq-8000.proxy.runpod.net'),
+		}
+	}
+
+	get encryption(): EncryptionConfig {
+		return {
+			key: this.get<string>('ENCRYPTION_KEY', 'default-encryption-key-change-in-prod'),
 		}
 	}
 
@@ -97,20 +105,13 @@ export class AppConfigService {
 			accessEndpoint: this.get<string>('S3_ACCESS_ENDPOINT', 'http://localhost:9000'),
 			responseEndpoint: this.get<string>('S3_RESPONSE_ENDPOINT', 'http://localhost:9000'),
 			region: this.get<string>('S3_REGION', 'ap-northeast-2'),
-			accessKeyId: this.get<string>('S3_ACCESS_KEY', 'minio'),
+			accessKeyId: this.get<string>('S3_ACCESS_KEY', 'altai-bi-qsl'),
 			secretAccessKey: this.get<string>('S3_SECRET_KEY', 'minio123'),
-			bucket: this.get<string>('S3_BUCKET', 'altai-carscan-media'),
+			bucket: this.get<string>('S3_BUCKET', 'bi-sql-media'),
 			imagePrefix: this.get<string>('S3_IMAGE_PREFIX', 'images'),
 			audioPrefix: this.get<string>('S3_AUDIO_PREFIX', 'audio'),
 			usePathStyle: this.get<boolean>('S3_PATH_STYLE', true),
 		}
-	}
-
-	get classificationPipelineUrl(): string {
-		return this.get<string>(
-			'CLASSIFICATION_PIPELINE_URL',
-			'https://maulerrr--indrive-quality-analyze-bytes.modal.run',
-		)
 	}
 
 	get nodeEnv(): string {

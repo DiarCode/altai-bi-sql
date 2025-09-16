@@ -4,6 +4,7 @@ import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/co
 import { PrismaService } from 'src/prisma/prisma.service'
 import { SignUpDto, UserDto } from '../dtos/users-auth.dtos'
 import { toUserDto } from '../utils/users.mapper'
+import { WORKSPACE_PURPOSE } from '@prisma/client'
 
 @Injectable()
 export class UsersProfileService {
@@ -13,12 +14,16 @@ export class UsersProfileService {
 		await this.prisma.user.create({
 			data: {
 				phoneNumber: dto.phoneNumber,
-				name: dto.name,
-				city: dto.city,
-				carModel: dto.carModel,
-				carYear: dto.carYear,
-				carColor: dto.carColor,
-				vinNumber: dto.vinNumber,
+				fullName: dto.fullName,
+			},
+		})
+
+		await this.prisma.workspace.create({
+			data: {
+				name: `${dto.fullName}'s Workspace`,
+				description: 'Personal workspace',
+				purpose: WORKSPACE_PURPOSE.DEFAULT,
+				owner: { connect: { phoneNumber: dto.phoneNumber } },
 			},
 		})
 	}
@@ -37,6 +42,7 @@ export class UsersProfileService {
 	async getById(userId: number): Promise<UserDto> {
 		const raw = await this.prisma.user.findUnique({
 			where: { id: userId },
+			include: { workspaces: true },
 		})
 
 		if (!raw) {

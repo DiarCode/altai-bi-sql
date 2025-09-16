@@ -1,33 +1,3 @@
-model CarAnalysis {
-  id                Int                @id @default(autoincrement())
-  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId            Int
-  carModel          String
-  carYear           Int
-  city              String
-  vin               String
-  createdAt         DateTime           @default(now())
-  totalEstimatedCost Int
-  overallScore      Int                @default(0)
-  status            CarStatus          @default(EXCELLENT)
-  summary           String             @db.Text
-  zones             CarAnalysisZone[]
-}
-
-model CarAnalysisZone {
-  id           Int      @id @default(autoincrement())
-  analysis     CarAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
-  analysisId   Int
-  name         String
-  breaking     Boolean
-  hasRust      Boolean
-  isDirty      Boolean
-  importance   IMPORTANCE
-  consequences String[]
-  estimatedCost Int
-  urgency      URGENCY
-  timeToFix    String
-}
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -39,19 +9,16 @@ generator client {
 
 model User {
   id          Int      @id @default(autoincrement()) @map("id")
-  name        String   @map("name")
+  fullName    String   @map("full_name")
   phoneNumber String   @unique @map("phone_number")
-  carModel    String?  @map("car_model")
-  carYear     Int?     @map("car_year")
-  carColor    String?  @map("car_color")
-  vinNumber   String?  @map("vin_number")
-  city        String?  @map("city")
+  
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
 
-  otpRequest UsersOTPRequest?
-  session    UsersSession?
-  analyses   CarAnalysis[]
+  otpRequest  UsersOTPRequest?
+  session     UsersSession?
+  workspaces  Workspace[]
+  userRequests UserRequest[]
 
   @@map("users")
 }
@@ -62,6 +29,7 @@ model UsersOTPRequest {
   userId      Int      @unique @map("user_id")
   phoneNumber String   @map("phone_number")
   otpCode     String   @map("otp_code")
+  
   createdAt   DateTime @default(now()) @map("created_at")
   expiresAt   DateTime @map("expires_at")
 
@@ -73,54 +41,189 @@ model UsersSession {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    Int      @unique @map("user_id")
   token     String   @unique @map("token")
+  
   createdAt DateTime @default(now()) @map("created_at")
   expiresAt DateTime @map("expires_at")
 
   @@map("users_sessions")
 }
 
-enum SERVICE_TYPE {
-  REPAIR
-  MAINTENANCE
-  WASHING
-  TIRE_SERVICE
-  DIAGNOSTICS
+enum WORKSPACE_PURPOSE {
+  HEALTH_CARE
+  E_COMMERCE
+  GOVERNMENT
+  ACCOUNTING
+  MARKETING
+  EDUCATION
+  FINANCE
+  ENTERTAINMENT
+  TECHNOLOGY
+  REAL_ESTATE
+  TRAVEL
+  FOOD_BEVERAGE
+  NON_PROFIT
+  SPORTS
+  DEFAULT
   OTHER
 }
 
-enum CarStatus {
-  EXCELLENT
-  COSMETIC_ISSUES
-  MECHANICAL_SERVICE_NEEDED
-  CRITICAL_CONDITION
+enum DATA_SOURCE_TYPE {
+  POSTGRESQL
+  MYSQL
 }
 
-enum URGENCY {
-  LOW
-  MEDIUM
-  HIGH
+enum GRAPH_TYPE {
+  BAR_CHART
+  LINE_CHART
+  PIE_CHART
+  SCATTER_PLOT
+  AREA_CHART
+  HISTOGRAM
+  BOX_PLOT
+  HEATMAP
+  GEOGRAPHIC_MAP
+  RADAR_CHART
+  BUBBLE_CHART
+  FUNNEL_CHART
+  TREE_MAP
 }
 
-enum IMPORTANCE {
-  CRITICAL
-  MODERATE
-  MINOR
+enum USER_REQUEST_STATUS {
+  PENDING
+  SUCCEEDED
+  FAILED
 }
 
-model InDrivePartner {
-  id        Int      @id @default(autoincrement()) @map("id")
-  name      String   @map("name")
-  city      String   @map("city")
-  address   String   @map("address")
-  phone     String   @map("phone")
-  description String?  @map("description")
-  serviceType SERVICE_TYPE @map("service_type")
-  rating    Float    @default(0) @map("rating")
-  reviewsCount Int   @default(0) @map("reviews_count")
-  latitude  Float    @map("latitude")
-  longitude Float    @map("longitude")
+model Workspace {
+  id          Int               @id @default(autoincrement()) @map("id")
+  name        String            @map("name")
+  description String            @map("description")
+  purpose     WORKSPACE_PURPOSE @map("purpose")
+  ownerId     Int               @map("owner_id")
+  owner       User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  createdAt           DateTime              @default(now()) @map("created_at")
+  updatedAt           DateTime              @default(now()) @updatedAt @map("updated_at")
+
+  workspaceDataSources WorkspaceDataSource[]
+  userRequests        UserRequest[]
+  dataTables          DataTable[]
+  ingestions          WorkspaceIngestion[]
+
+  @@map("workspaces")
+}
+
+model WorkspaceDataSource {
+  id          Int              @id @default(autoincrement()) @map("id")
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId Int              @map("workspace_id")
+  type        DATA_SOURCE_TYPE @map("type")
+  config      Json             @map("config")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
-  @@map("indrive_partners")
+  @@map("workspace_data_sources")
+}
+
+model UserRequest {
+  id          Int         @id @default(autoincrement()) @map("id")
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      Int         @map("user_id")
+  workspaceId Int         @map("workspace_id")
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  prompt      String      @map("prompt")
+  status      USER_REQUEST_STATUS @map("status")
+  graphType   GRAPH_TYPE? @map("graph_type")
+  sqlScript   String?     @map("sql_script")
+  resultText  String?     @map("result_text")
+  resultTable Json?       @map("result_table")
+  graphConfig Json?       @map("graph_config")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("user_requests")
+}
+
+/// Metadata models for discovered database schema per workspace
+model DataTable {
+  id           Int        @id @default(autoincrement()) @map("id")
+  workspace    Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId  Int        @map("workspace_id")
+  schemaName   String     @map("schema_name")
+  tableName    String     @map("table_name")
+  businessName String?    @map("business_name")
+  description  String?    @map("description")
+
+  columns      DataColumn[]
+  fkFrom       ForeignKey[] @relation("FK_From_Table")
+  fkTo         ForeignKey[] @relation("FK_To_Table")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@unique([workspaceId, schemaName, tableName], map: "uniq_table_per_workspace")
+  @@map("data_tables")
+}
+
+model DataColumn {
+  id            Int       @id @default(autoincrement()) @map("id")
+  table         DataTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  tableId       Int       @map("table_id")
+  columnName    String    @map("column_name")
+  dataType      String    @map("data_type")
+  isNullable    Boolean   @default(true) @map("is_nullable")
+  isPrimaryKey  Boolean   @default(false) @map("is_primary_key")
+  isForeignKey  Boolean   @default(false) @map("is_foreign_key")
+  businessName  String?   @map("business_name")
+  description   String?   @map("description")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  fkFrom ForeignKey[] @relation("FK_From_Column")
+  fkTo   ForeignKey[] @relation("FK_To_Column")
+
+  @@unique([tableId, columnName], map: "uniq_column_per_table")
+  @@map("data_columns")
+}
+
+model ForeignKey {
+  id             Int        @id @default(autoincrement()) @map("id")
+  fromTable      DataTable  @relation("FK_From_Table", fields: [fromTableId], references: [id], onDelete: Cascade)
+  fromTableId    Int        @map("from_table_id")
+  fromColumn     DataColumn @relation("FK_From_Column", fields: [fromColumnId], references: [id], onDelete: Cascade)
+  fromColumnId   Int        @map("from_column_id")
+  toTable        DataTable  @relation("FK_To_Table", fields: [toTableId], references: [id], onDelete: Cascade)
+  toTableId      Int        @map("to_table_id")
+  toColumn       DataColumn @relation("FK_To_Column", fields: [toColumnId], references: [id], onDelete: Cascade)
+  toColumnId     Int        @map("to_column_id")
+  constraintName String?    @map("constraint_name")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@unique([fromColumnId], map: "uniq_fk_from_column")
+  @@map("foreign_keys")
+}
+
+enum INGESTION_STATUS {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+model WorkspaceIngestion {
+  id          Int              @id @default(autoincrement()) @map("id")
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId Int              @map("workspace_id")
+  status      INGESTION_STATUS @default(PENDING) @map("status")
+  error       String?          @map("error")
+  startedAt   DateTime         @default(now()) @map("started_at")
+  finishedAt  DateTime?        @map("finished_at")
+
+  @@index([workspaceId], map: "idx_ingestion_workspace")
+  @@map("workspace_ingestions")
 }

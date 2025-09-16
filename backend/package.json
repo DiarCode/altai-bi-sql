@@ -25,8 +25,7 @@
 		"prisma:generate": "bunx prisma generate",
 		"prisma:migrate": "bunx prisma migrate dev",
 		"prisma:studio": "bunx prisma studio",
-		"prisma:seed": "ts-node --transpile-only prisma/seed.ts",
-		"prepare": "cd .. && husky"
+		"prisma:seed": "ts-node --transpile-only prisma/seed.ts"
 	},
 	"dependencies": {
 		"@aws-sdk/client-s3": "^3.828.0",
@@ -45,6 +44,7 @@
 		"@types/bcrypt": "^5.0.2",
 		"@types/cookie-parser": "^1.4.8",
 		"@types/jsonwebtoken": "^9.0.9",
+		"@types/pg": "^8.15.5",
 		"bcrypt": "^6.0.0",
 		"class-transformer": "^0.5.1",
 		"class-validator": "^0.14.2",
@@ -60,13 +60,16 @@
 		"module-alias": "^2.2.3",
 		"mongoose": "^8.16.3",
 		"morgan": "^1.10.0",
+		"mysql2": "^3.12.0",
 		"nestjs-pino": "^4.4.0",
 		"openai": "^4.103.0",
+		"pg": "^8.13.1",
 		"pg-boss": "^9.0.3",
 		"pino-http": "^10.4.0",
 		"reflect-metadata": "^0.2.2",
 		"rxjs": "^7.8.1",
 		"sharp": "^0.34.2",
+		"sql-formatter": "^15.4.6",
 		"uuid": "^11.1.0"
 	},
 	"devDependencies": {

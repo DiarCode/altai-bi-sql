@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 
 
 
 import { Button } from '@/core/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/core/components/ui/card';
-import { Separator } from '@/core/components/ui/separator';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/core/components/ui/table';
 
 
@@ -21,12 +19,6 @@ const props = defineProps<{
   bundle: RequestBundle;
   onRetry?: (b: RequestBundle) => void;
 }>();
-
-const showSQL = ref(false);
-
-function copySql(sql: string) {
-  navigator.clipboard.writeText(sql);
-}
 
 /** Detect numeric columns for right alignment (looks cleaner for metrics) */
 const numericCols = computed<Set<string>>(() => {
@@ -48,44 +40,14 @@ const numericCols = computed<Set<string>>(() => {
 </script>
 
 <template>
-	<Card
-		class="border-white/30 bg-gradient-to-br from-white/15 to-white/5 backdrop-blur-xl shadow-xl overflow-hidden"
-	>
-		<CardHeader class="space-y-4 pb-6">
-			<div class="space-y-3">
-				<CardTitle class="text-xl font-bold tracking-tight text-white leading-relaxed">
-					{{ bundle.request.prompt }}
-				</CardTitle>
+	<div>
+		<div class="space-y-4 pb-4">
+			<p class="text-2xl font-medium tracking-tight text-white leading-relaxed">
+				{{ bundle.request.prompt }}
+			</p>
+		</div>
 
-				<div class="flex items-center gap-4">
-					<span
-						:class="[
-              'inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold',
-              bundle.request.status === 'pending' && 'bg-amber-500/20 text-amber-200 border border-amber-400/30',
-              bundle.request.status === 'success' && 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/30',
-              bundle.request.status === 'error' && 'bg-rose-500/20 text-rose-200 border border-rose-400/30',
-            ]"
-						aria-live="polite"
-					>
-						<span
-							class="h-2 w-2 rounded-full"
-							:class="[
-                bundle.request.status === 'pending' && 'bg-amber-400 animate-pulse',
-                bundle.request.status === 'success' && 'bg-emerald-400',
-                bundle.request.status === 'error' && 'bg-rose-400',
-              ]"
-						/>
-						{{ bundle.request.status.charAt(0).toUpperCase() + bundle.request.status.slice(1) }}
-					</span>
-
-					<span class="text-sm text-slate-400 font-medium">
-						{{ new Date(bundle.request.createdAt).toLocaleString() }}
-					</span>
-				</div>
-			</div>
-		</CardHeader>
-
-		<CardContent class="space-y-6">
+		<div class="space-y-12">
 			<!-- Loading -->
 			<div
 				v-if="bundle.request.status === 'pending'"
@@ -139,65 +101,17 @@ const numericCols = computed<Set<string>>(() => {
 			<!-- Success -->
 			<template v-else-if="bundle.response">
 				<!-- Summary -->
+
 				<div
-					class="rounded-2xl border border-white/20 bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-sm"
+					class="rounded-2xl border border-white/20 bg-gradient-to-br from-white/10 to-white/5 px-4 py-4 backdrop-blur-sm"
 				>
-					<h4 class="text-lg font-semibold text-blue-200 mb-3">Analysis Summary</h4>
-					<p class="text-slate-200 text-base leading-relaxed">
+					<p class="text-slate-200 text-base font-light leading-relaxed">
 						{{ bundle.response.resultText }}
 					</p>
 				</div>
 
-				<!-- SQL controls -->
-				<div class="flex items-center gap-3">
-					<Button
-						size="lg"
-						variant="secondary"
-						class="bg-white/10 border-white/30 text-white hover:bg-white/20 font-semibold"
-						@click="showSQL = !showSQL"
-					>
-						{{ showSQL ? '🔼 Hide SQL Query' : '🔽 View SQL Query' }}
-					</Button>
-					<Button
-						v-if="showSQL"
-						size="lg"
-						variant="outline"
-						class="border-blue-400/40 bg-blue-500/10 text-blue-200 hover:bg-blue-500/20 font-semibold"
-						@click="copySql(bundle.response.sql)"
-						title="Copy SQL to clipboard"
-					>
-						📋 Copy SQL
-					</Button>
-				</div>
-
-				<!-- SQL -->
-				<transition
-					name="fade"
-					mode="out-in"
-				>
-					<div
-						v-if="showSQL"
-						class="rounded-2xl border border-white/30 bg-black/40 backdrop-blur-sm overflow-hidden"
-					>
-						<div
-							class="bg-gradient-to-r from-slate-800/50 to-slate-700/30 px-4 py-3 border-b border-white/20"
-						>
-							<p class="text-sm font-semibold text-slate-300">Generated SQL Query</p>
-						</div>
-						<pre
-							class="max-h-80 overflow-auto p-6 text-sm text-blue-200 font-mono leading-relaxed"
-						><code>{{ bundle.response.sql }}</code></pre>
-					</div>
-				</transition>
-
-				<Separator class="bg-white/20" />
-
 				<!-- Graph -->
-				<div
-					v-if="bundle.response.graph"
-					class="space-y-4"
-				>
-					<h4 class="text-xl font-bold text-white">Data Visualization</h4>
+				<div v-if="bundle.response.graph">
 					<GraphView
 						:rows="bundle.response.rows"
 						:spec="bundle.response.graph"
@@ -206,10 +120,8 @@ const numericCols = computed<Set<string>>(() => {
 
 				<!-- 🔵 shadcn Table -->
 				<div class="space-y-4">
-					<h4 class="text-xl font-bold text-white">Detailed Results</h4>
-
 					<div
-						class="overflow-hidden rounded-2xl border border-white/30 bg-gradient-to-br from-white/5 to-transparent backdrop-blur-sm"
+						class="overflow-hidden rounded-2xl border border-white/20 bg-slate-500/5 to-transparent backdrop-blur-lg"
 					>
 						<Table class="min-w-full">
 							<TableCaption class="text-slate-400">
@@ -262,9 +174,22 @@ const numericCols = computed<Set<string>>(() => {
 						</div>
 					</div>
 				</div>
+
+				<div
+					class="rounded-2xl border border-white/30 bg-black/40 backdrop-blur-sm overflow-hidden"
+				>
+					<div
+						class="bg-gradient-to-r from-slate-800/50 to-slate-700/30 px-4 py-3 border-b border-white/20"
+					>
+						<p class="text-sm font-semibold text-slate-300">Generated SQL Query</p>
+					</div>
+					<pre
+						class="max-h-80 overflow-auto p-6 text-sm text-blue-200 font-mono leading-relaxed"
+					><code>{{ bundle.response.sql }}</code></pre>
+				</div>
 			</template>
-		</CardContent>
-	</Card>
+		</div>
+	</div>
 </template>
 
 <style scoped>

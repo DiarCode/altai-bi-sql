@@ -1,16 +1,20 @@
 <script setup lang="ts">
 import { ChevronDown, LogOut, Pencil, Plus } from "lucide-vue-next";
+import { storeToRefs } from "pinia";
 import { computed, ref } from 'vue';
 
 
-
-import BG_URL from '@/core/assets/images/home-bg.jpg';
 import { Avatar, AvatarFallback } from "@/core/components/ui/avatar";
 import { Button } from '@/core/components/ui/button';
 import { Card } from '@/core/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/core/components/ui/dropdown-menu";
 import DropdownMenuLabel from "@/core/components/ui/dropdown-menu/DropdownMenuLabel.vue";
 import DropdownMenuSeparator from "@/core/components/ui/dropdown-menu/DropdownMenuSeparator.vue";
+
+
+
+import BackgroundImagePicker from "@/modules/home/components/background-image-picker.vue";
+import { useBackgroundImage } from "@/modules/home/composables/home-bg.composable";
 
 
 
@@ -64,26 +68,36 @@ async function handleUpdateConnection(data: { dbType: 'PostgreSQL' | 'MySQL'; us
 }
 
 const workspaceName = computed(() => activeWorkspace.value?.name ?? '—');
+
+const bgStore = useBackgroundImage();
+const { url: selectedBgUrl } = storeToRefs(bgStore)
+
+// optional: computed style object for clean template usage
+const bgStyle = computed(() => ({ backgroundImage: `url(${selectedBgUrl.value})` }))
 </script>
 
 <template>
 	<div
 		class="relative min-h-screen w-full bg-cover bg-center bg-fixed"
-		:style="{ backgroundImage: `url(${BG_URL})` }"
+		:style="bgStyle"
 	>
 		<!-- Enhanced overlay with gradient for better readability -->
 		<div
 			class="absolute inset-0 bg-gradient-to-br from-slate-950/50 via-slate-900/40 to-blue-950/30"
 		/>
 
-		<main class="relative z-10 mx-auto flex max-w-5xl flex-col items-center px-6 py-8">
+		<div class="absolute right-6 bottom-6">
+			<BackgroundImagePicker />
+		</div>
+
+		<main class="relative z-10 mx-auto flex max-w-5xl flex-col items-center px-4 sm:px-6 py-8">
 			<!-- Enhanced Header with better typography -->
 			<div class="mb-10 w-full">
 				<div class="flex gap-2 items-center justify-center">
 					<DropdownMenu>
 						<DropdownMenuTrigger>
 							<button
-								class="cursor-pointer inline-flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 backdrop-blur-md"
+								class="cursor-pointer inline-flex items-center gap-4 rounded-2xl border border-white/10 bg-white/10 px-3 py-3 backdrop-blur-lg"
 								title="Workspace"
 							>
 								<div class="flex items-center gap-2">
@@ -128,7 +142,7 @@ const workspaceName = computed(() => activeWorkspace.value?.name ?? '—');
 					<DropdownMenu>
 						<DropdownMenuTrigger>
 							<button
-								class="cursor-pointer inline-flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 backdrop-blur-md"
+								class="cursor-pointer inline-flex items-center gap-4 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur-md"
 								title="Database Connection"
 							>
 								<div class="flex items-center gap-2">
@@ -169,9 +183,9 @@ const workspaceName = computed(() => activeWorkspace.value?.name ?? '—');
 
 					<DropdownMenu>
 						<DropdownMenuTrigger>
-							<Avatar class="size-10">
+							<Avatar class="size-11 rounded-md">
 								<AvatarFallback
-									class="bg-slate-500/5 border border-white/15 backdrop-blur-md text-white text-sm"
+									class="bg-white/10 rounded-md border border-white/15 backdrop-blur-md text-white text-sm"
 									>CN</AvatarFallback
 								>
 							</Avatar>
@@ -190,7 +204,7 @@ const workspaceName = computed(() => activeWorkspace.value?.name ?? '—');
 
 			<!-- Enhanced Glass card container -->
 			<Card
-				class="relative w-full overflow-hidden p-0 rounded-3xl border border-white/20 bg-slate-100/5 backdrop-blur-lg"
+				class="relative w-full overflow-hidden p-0 rounded-3xl border border-white/20 bg-slate-300/10 backdrop-blur-lg"
 			>
 				<RequestComposer @submit="submitPrompt" />
 

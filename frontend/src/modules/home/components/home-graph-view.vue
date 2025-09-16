@@ -62,44 +62,30 @@ const barWidth = computed(() => {
 <template>
 	<div class="w-full space-y-4">
 		<!-- Chart header -->
-		<div class="flex items-center justify-between">
-			<div class="space-y-1">
-				<h5 class="text-lg font-bold text-white">
-					{{ spec.type === 'LINEAR' ? 'Trend Analysis' : 'Distribution Chart' }}
-				</h5>
-				<div class="flex items-center gap-4 text-sm text-slate-300">
-					<span class="flex items-center gap-2">
-						<span class="font-medium">Y-Axis:</span>
-						<code
-							class="px-2 py-1 rounded bg-blue-500/20 text-blue-200 font-mono"
-							>{{ spec.yColumnName }}</code
-						>
-					</span>
-					<span class="flex items-center gap-2">
-						<span class="font-medium">X-Axis:</span>
-						<code
-							class="px-2 py-1 rounded bg-cyan-500/20 text-cyan-200 font-mono"
-							>{{ spec.xColumn }}</code
-						>
-					</span>
-				</div>
-			</div>
-			<div class="text-right space-y-1">
-				<p class="text-sm font-semibold text-slate-300">{{ points.ys.length }} data points</p>
-				<p class="text-xs text-slate-400">
-					Range: {{ Math.min(...points.ys).toLocaleString() }} -
-					{{ Math.max(...points.ys).toLocaleString() }}
-				</p>
-			</div>
+		<div class="flex items-center gap-4 text-sm text-slate-300">
+			<span class="flex items-center gap-2">
+				<span class="font-medium">Y-Axis:</span>
+				<code
+					class="px-2 py-1 rounded bg-blue-500/20 text-blue-200 font-mono"
+					>{{ spec.yColumnName }}</code
+				>
+			</span>
+			<span class="flex items-center gap-2">
+				<span class="font-medium">X-Axis:</span>
+				<code
+					class="px-2 py-1 rounded bg-cyan-500/20 text-cyan-200 font-mono"
+					>{{ spec.xColumn }}</code
+				>
+			</span>
 		</div>
 
 		<!-- Chart container -->
 		<div
-			class="overflow-hidden rounded-2xl border border-white/30 bg-gradient-to-br from-slate-900/30 to-slate-800/20 backdrop-blur-sm"
+			class="overflow-hidden h-80 rounded-3xl border border-white/30 bg-gradient-to-br from-slate-900/30 to-slate-800/20 backdrop-blur-sm"
 		>
 			<svg
 				:viewBox="`0 0 ${width} ${height}`"
-				class="w-full h-80"
+				class="min-h-full"
 				role="img"
 				:aria-label="`${spec.type} chart showing ${spec.yColumnName} by ${spec.xColumn}`"
 			>
