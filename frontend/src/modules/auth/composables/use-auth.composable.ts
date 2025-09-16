@@ -1,143 +1,133 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { authService } from '../services/auth.service'
-import type { LoginRequest, RegisterRequest, OtpVerificationRequest } from '../models/auth.models'
-import type { KazakhstanCity } from '../constants/cities.constants'
+import type { LoginRequest, RegisterRequest, OtpVerificationRequest, AuthState } from '../models/auth.models'
 
 export function useAuth() {
 	const router = useRouter()
-	const isLoading = ref(false)
-	const error = ref<string | null>(null)
 	
-	const loginState = reactive({
+	const authState = reactive<AuthState>({
+		isAuthenticated: false,
+		user: null,
+		currentStep: 'phone',
 		phoneNumber: '',
-		step: 'phone' as 'phone' | 'otp'
+		isLoading: false,
+		error: null
 	})
 	
-	const registerState = reactive({
-		phoneNumber: '',
-		name: '',
-		carModel: '',
-		carYear: new Date().getFullYear(),
-		carColor: '',
-		carVin: '',
-		city: '' as KazakhstanCity | ''
+	const registerData = reactive({
+		fullName: '',
+		phoneNumber: ''
 	})
 	
 	const otpCode = ref('')
 	
 	const login = async (phoneNumber: string) => {
-		isLoading.value = true
-		error.value = null
+		authState.isLoading = true
+		authState.error = null
 		
 		try {
-			const response = await authService.login({ phoneNumber })
+			const request: LoginRequest = { phoneNumber }
+			const response = await authService.login(request)
 			
 			if (response.success) {
-				loginState.phoneNumber = phoneNumber
-				loginState.step = 'otp'
+				authState.phoneNumber = phoneNumber
+				authState.currentStep = 'otp'
 			} else {
-				error.value = response.message
+				authState.error = response.message
 			}
 		} catch (err) {
-			error.value = 'Произошла ошибка при отправке SMS'
+			authState.error = 'Произошла ошибка при входе'
 		} finally {
-			isLoading.value = false
+			authState.isLoading = false
 		}
 	}
 	
 	const register = async () => {
-		isLoading.value = true
-		error.value = null
+		authState.isLoading = true
+		authState.error = null
 		
 		try {
-			// Validate required fields
-			if (!registerState.city) {
-				error.value = 'Выберите город'
-				isLoading.value = false
-				return
-			}
-			
 			const request: RegisterRequest = {
-				phoneNumber: registerState.phoneNumber,
-				name: registerState.name,
-				carModel: registerState.carModel,
-				carYear: registerState.carYear,
-				carColor: registerState.carColor,
-				carVin: registerState.carVin,
-				city: registerState.city as KazakhstanCity
+				phoneNumber: registerData.phoneNumber,
+				fullName: registerData.fullName
 			}
 			
 			const response = await authService.register(request)
 			
 			if (response.success) {
-				// After successful registration, redirect to login with pre-filled phone
-				router.push({
-					path: '/auth/login',
-					query: { phone: registerState.phoneNumber }
-				})
+				authState.phoneNumber = registerData.phoneNumber
+				authState.currentStep = 'otp'
+				router.push('/auth/login')
 			} else {
-				error.value = response.message
+				authState.error = response.message
 			}
 		} catch (err) {
-			error.value = 'Произошла ошибка при регистрации'
+			authState.error = 'Произошла ошибка при регистрации'
 		} finally {
-			isLoading.value = false
+			authState.isLoading = false
 		}
 	}
 	
-	const verifyOtp = async (phoneNumber: string, otp: string) => {
-		isLoading.value = true
-		error.value = null
+	const verifyOtp = async () => {
+		authState.isLoading = true
+		authState.error = null
 		
 		try {
-			const response = await authService.verifyOtp({ phoneNumber, otp })
+			const request: OtpVerificationRequest = {
+				phoneNumber: authState.phoneNumber,
+				otp: otpCode.value
+			}
 			
-			if (response.success) {
-				if (response.token) {
-					localStorage.setItem('token', response.token)
-				}
-				// Navigate to scan page
+			const response = await authService.verifyOtp(request)
+			
+			if (response.success && response.user) {
+				authState.isAuthenticated = true
+				authState.user = response.user
+				authState.currentStep = 'complete'
 				router.push('/app/home')
 			} else {
-				error.value = response.message
+				authState.error = response.message
 			}
 		} catch (err) {
-			error.value = 'Произошла ошибка при подтверждении кода'
+			authState.error = 'Произошла ошибка при проверке кода'
 		} finally {
-			isLoading.value = false
+			authState.isLoading = false
 		}
 	}
 	
 	const logout = async () => {
-		await authService.logout()
-		router.push('/welcome')
+		try {
+			await authService.logout()
+			authState.isAuthenticated = false
+			authState.user = null
+			authState.currentStep = 'phone'
+			authState.phoneNumber = ''
+			authState.error = null
+			otpCode.value = ''
+			registerData.fullName = ''
+			registerData.phoneNumber = ''
+			router.push('/welcome')
+		} catch (err) {
+			console.error('Logout error:', err)
+		}
 	}
 	
-	const resetForm = () => {
-		loginState.phoneNumber = ''
-		loginState.step = 'phone'
-		registerState.phoneNumber = ''
-		registerState.name = ''
-		registerState.carModel = ''
-		registerState.carYear = new Date().getFullYear()
-		registerState.carColor = ''
-		registerState.carVin = ''
-		registerState.city = ''
+	const resetAuthState = () => {
+		authState.currentStep = 'phone'
+		authState.phoneNumber = ''
+		authState.error = null
 		otpCode.value = ''
-		error.value = null
 	}
-	
+
 	return {
-		isLoading,
-		error,
-		loginState,
-		registerState,
+		authState,
+		registerData,
 		otpCode,
 		login,
 		register,
 		verifyOtp,
 		logout,
-		resetForm
+		resetAuthState
 	}
 }

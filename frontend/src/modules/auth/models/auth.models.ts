@@ -1,5 +1,3 @@
-import type { KazakhstanCity } from '../constants/cities.constants'
-
 export interface LoginRequest {
 	phoneNumber: string
 }
@@ -11,29 +9,31 @@ export interface OtpVerificationRequest {
 
 export interface RegisterRequest {
 	phoneNumber: string
-	name: string
-	carModel: string
-	carYear: number
-	carColor: string
-	carVin: string
-	city: KazakhstanCity
+	fullName: string
 }
 
 export interface AuthResponse {
 	success: boolean
 	message: string
 	token?: string
+	user?: User
 }
 
 export interface User {
-	id: number
-	name: string
+	id: string
+	fullName: string
 	phoneNumber: string
-	carModel: string
-	carYear: number
-	carColor: string
-	vinNumber: string
-	city: string
-	createdAt: Date
-	updatedAt: Date
+	createdAt: string
+	updatedAt: string
+}
+
+export type AuthStep = 'phone' | 'otp' | 'complete'
+
+export interface AuthState {
+	isAuthenticated: boolean
+	user: User | null
+	currentStep: AuthStep
+	phoneNumber: string
+	isLoading: boolean
+	error: string | null
 }

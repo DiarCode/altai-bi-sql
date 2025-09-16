@@ -34,3 +34,19 @@ export interface RequestBundle {
 	request: BiRequest
 	response?: BiResponse
 }
+
+export interface WorkspaceData {
+  name: string
+  description: string
+  purpose: Purpose
+}
+export type DatabaseType = 'PostgreSQL' | 'MySQL'
+
+export interface ConnectionData {
+  dbType: DatabaseType
+  username: string
+  password: string
+  databaseName: string
+  host: string
+  port: string
+}
