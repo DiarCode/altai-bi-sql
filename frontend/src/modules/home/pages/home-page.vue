@@ -1,16 +1,21 @@
 <script setup lang="ts">
 import { ChevronDown, LogOut, Pencil, Plus } from "lucide-vue-next";
+import { storeToRefs } from "pinia";
 import { computed } from 'vue';
 
 
 
-import BG_URL from '@/core/assets/images/home-bg.avif';
 import { Avatar, AvatarFallback } from "@/core/components/ui/avatar";
 import { Button } from '@/core/components/ui/button';
 import { Card } from '@/core/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/core/components/ui/dropdown-menu";
 import DropdownMenuLabel from "@/core/components/ui/dropdown-menu/DropdownMenuLabel.vue";
 import DropdownMenuSeparator from "@/core/components/ui/dropdown-menu/DropdownMenuSeparator.vue";
+
+
+
+import BackgroundImagePicker from "@/modules/home/components/background-image-picker.vue";
+import { useBackgroundImage } from "@/modules/home/composables/home-bg.composable";
 
 
 
@@ -32,19 +37,29 @@ const {
 } = useBiRequests();
 
 const workspaceName = computed(() => activeWorkspace.value?.name ?? '—');
+
+const bgStore = useBackgroundImage();
+const { url: selectedBgUrl } = storeToRefs(bgStore)
+
+// optional: computed style object for clean template usage
+const bgStyle = computed(() => ({ backgroundImage: `url(${selectedBgUrl.value})` }))
 </script>
 
 <template>
 	<div
 		class="relative min-h-screen w-full bg-cover bg-center bg-fixed"
-		:style="{ backgroundImage: `url(${BG_URL})` }"
+		:style="bgStyle"
 	>
 		<!-- Enhanced overlay with gradient for better readability -->
 		<div
 			class="absolute inset-0 bg-gradient-to-br from-slate-950/50 via-slate-900/40 to-blue-950/30"
 		/>
 
-		<main class="relative z-10 mx-auto flex max-w-5xl flex-col items-center px-6 py-8">
+		<div class="absolute right-6 bottom-6">
+			<BackgroundImagePicker />
+		</div>
+
+		<main class="relative z-10 mx-auto flex max-w-5xl flex-col items-center px-4 sm:px-6 py-8">
 			<!-- Enhanced Header with better typography -->
 			<div class="mb-10 w-full">
 				<div class="flex gap-2 items-center justify-center">
