@@ -94,4 +94,27 @@ export class PromptBuilderService {
 			maxTokens: tpl.maxTokens,
 		}
 	}
+
+	buildSqlRepairPrompt(
+		originalPrompt: string,
+		previousSql: string,
+		dbError: string,
+		metadata: unknown,
+		foreignKeys: unknown,
+	): BuiltPrompt {
+		const tpl = this.registry.get('sql-repair')
+		const user = tpl.user
+			.replace(/{{prompt}}/g, originalPrompt)
+			.replace(/{{previousSql}}/g, previousSql)
+			.replace(/{{dbError}}/g, dbError)
+			.replace(/{{metadata}}/g, JSON.stringify(metadata, null, 2))
+			.replace(/{{foreignKeys}}/g, JSON.stringify(foreignKeys, null, 2))
+		return {
+			messages: [
+				{ role: 'system', content: tpl.system.trim() },
+				{ role: 'user', content: user.trim() },
+			],
+			maxTokens: tpl.maxTokens,
+		}
+	}
 }

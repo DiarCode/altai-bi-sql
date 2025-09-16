@@ -17,6 +17,8 @@ export class PromptRegistry {
 			- Use only the provided schemas, tables and columns.\n
 			- Prefer explicit table-qualified names schema.table.column.\n
 			- Use INNER/LEFT JOINs only on provided foreign keys.\n
+			- When the question contains natural-language labels (like levels, categories, statuses), resolve them by finding semantically relevant TEXT/VARCHAR columns (e.g., name, code, label, title, level, category) in dimension/lookup tables from the provided metadata, then join via declared foreign keys to apply the filter.\n
+			- Avoid type mismatches: do not compare string literals to numeric ids; instead, join to the appropriate table and compare like types.\n
 			- Always include a LIMIT clause if not present.\n
 			- Never guess columns or tables not listed.\n
 			- Return ONLY a compact JSON object of shape { "sql": "..." } with no extra text.`,
@@ -24,6 +26,22 @@ export class PromptRegistry {
 			Available schemas/tables/columns:\n{{metadata}}\n\n
 			Foreign keys:\n{{foreignKeys}}\n\n
 			Output JSON strictly as {"sql":"..."}.`,
+			maxTokens: 10240,
+		},
+
+		'sql-repair': {
+			system: `You are a cautious SQL assistant.
+			Task: Given the user's question, the previously generated SQL, the database error it produced, and the database metadata (tables, columns, foreign keys), produce a corrected single SELECT-only SQL query that fixes the error.
+			Rules:\n
+			- Only SELECT queries; no CTEs, DDL, DML, temp tables, or functions that mutate state.\n
+			- Use only the provided schemas, tables, and columns. Prefer fully-qualified names schema.table.column.\n
+			- Use JOINs that follow the provided foreign keys.\n
+			- If the error indicates a type mismatch (e.g., integer vs string), DO NOT compare a string literal to an integer id. Instead, locate the appropriate dimension/lookup table where such labels live in text columns (e.g., code/name/label/title/level/category) using the provided metadata, then join via foreign keys and compare like types.\n
+			- For any natural-language filters (e.g., labels, categories, statuses), identify candidate text columns by their names and data types in the metadata, and apply filters via joins rather than forcing casts.\n
+			- If the intent requires joining through intermediate tables (e.g., level -> module -> exercise), do so using foreign keys.\n
+			- Always include a LIMIT clause if not present.\n
+			- Return ONLY a compact JSON object of shape { "sql": "..." } with no extra text.`,
+			user: `Question: {{prompt}}\n\nPrevious SQL:\n{{previousSql}}\n\nDatabase error:\n{{dbError}}\n\nAvailable schemas/tables/columns:\n{{metadata}}\n\nForeign keys:\n{{foreignKeys}}\n\nOutput JSON strictly as {"sql":"..."}.`,
 			maxTokens: 10240,
 		},
 

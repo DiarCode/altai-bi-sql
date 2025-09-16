@@ -19,6 +19,7 @@ import {
 	parseColumnarTable,
 } from '../utils/result-processing.util'
 import { DataRequestResultDto } from '../dtos/data-requests.dto'
+import { SQL_RETRY_MAX } from '../utils/config.util'
 
 @Injectable()
 export class DataRequestsService {
@@ -137,12 +138,68 @@ export class DataRequestsService {
 			queryTimeoutMs: 10_000,
 		})
 
-		// 4. Execute
+
+		// 4. Execute with LLM repair retries on DB error
 		let rows: Record<string, unknown>[] = []
-		if (ds.type === DATA_SOURCE_TYPE.POSTGRESQL) {
-			rows = await this.execPostgres(ds, safeSql, 10_000)
-		} else {
-			rows = await this.execMysql(ds, safeSql, 10_000)
+		let currentSql = safeSql
+		for (let attempt = 0; attempt <= SQL_RETRY_MAX; attempt++) {
+			try {
+				if (ds.type === DATA_SOURCE_TYPE.POSTGRESQL) {
+					rows = await this.execPostgres(ds, currentSql, 10_000)
+				} else {
+					rows = await this.execMysql(ds, currentSql, 10_000)
+				}
+				break
+			} catch (err) {
+				const isLast = attempt === SQL_RETRY_MAX
+				const dbError = (err as Error).message || String(err)
+				// eslint-disable-next-line no-console
+				console.debug('[DataRequests] SQL attempt failed', { attempt, isLast, dbError, currentSql })
+				try {
+					const repairPrompt = this.promptBuilder.buildSqlRepairPrompt(
+						prompt,
+						currentSql,
+						dbError,
+						metadata,
+						foreignKeys,
+					)
+					const repairResp = await this.llm.completions({
+						messages: repairPrompt.messages,
+						max_completion_tokens: repairPrompt.maxTokens,
+						response_format: { type: 'json_object' },
+					})
+					const raw = LlmClientService.firstText(repairResp)?.trim()
+					if (raw) {
+						const cleaned = stripCodeFences(raw)
+						let nextSql: string | undefined
+						try {
+							const obj = JSON.parse(cleaned) as { sql?: unknown }
+							if (obj && typeof obj === 'object' && typeof obj.sql === 'string') {
+								nextSql = obj.sql.trim()
+							}
+						} catch {
+							// Fallback: treat cleaned as raw SQL
+							nextSql = cleaned
+						}
+						if (nextSql) {
+							currentSql = await this.guard.validateAndRewrite(nextSql, {
+								workspaceId,
+								dialect,
+								allowedSchemas,
+								forceLimit: 101,
+								forbidFreeJoins: true,
+								queryTimeoutMs: 10_000,
+							})
+							// eslint-disable-next-line no-console
+							console.debug('[DataRequests] Repaired SQL candidate', { attempt, currentSql })
+						}
+					}
+				} catch {
+					// swallow LLM/repair errors and fall through to throw original err on max
+				}
+				if (isLast) throw err
+				// otherwise continue to next attempt (retry)
+			}
 		}
 
 		// 5. Enforce row/size limits and mask PII
@@ -197,7 +254,7 @@ export class DataRequestsService {
 			where: { id: created.id },
 			data: {
 				status: USER_REQUEST_STATUS.SUCCEEDED,
-				sqlScript: safeSql,
+				sqlScript: currentSql,
 				resultText,
 				resultTable: result as unknown as Prisma.JsonObject,
 				graphConfig,
@@ -208,7 +265,7 @@ export class DataRequestsService {
 			requestId: created.id,
 			status: USER_REQUEST_STATUS.SUCCEEDED,
 			responseId,
-			sqlScript: safeSql,
+			sqlScript: currentSql,
 			resultText,
 			resultTable: result,
 			graphConfig,
