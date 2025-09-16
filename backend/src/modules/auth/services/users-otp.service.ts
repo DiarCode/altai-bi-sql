@@ -72,11 +72,11 @@ export class UsersOtpService {
 		const user = await this.prisma.user.upsert({
 			where: { phoneNumber: phone },
 			create: {
-				name: placeholderName,
+				fullName: placeholderName,
 				phoneNumber: phone,
 			},
 			update: {
-				name: placeholderName,
+				fullName: placeholderName,
 				phoneNumber: phone,
 			},
 		})

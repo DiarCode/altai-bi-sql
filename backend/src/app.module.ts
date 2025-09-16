@@ -9,11 +9,12 @@ import { PrismaModule } from './prisma/prisma.module'
 import { SecurityMiddleware } from './common/middleware/security.middleware'
 
 import { ScheduleModule } from '@nestjs/schedule'
-import { BossModule } from './common/queue/boss.module'
+// import { BossModule } from './common/queue/boss.module'
 import { AuthModule } from './modules/auth/auth.module'
-import { S3Module } from './common/s3/s3.module'
+// import { S3Module } from './common/s3/s3.module'
 import { CommonModule } from './common/common.module'
-import { ImageClassificationModule } from './modules/image-classification/image-classification.module'
+import { WorkspacesModule } from './modules/workspaces/workspaces.module'
+import { DataRequestsModule } from './modules/data-requests/data-requests.module'
 
 @Module({
 	imports: [
@@ -30,13 +31,14 @@ import { ImageClassificationModule } from './modules/image-classification/image-
 		ConfigModule.forRoot({ isGlobal: true }),
 		AppConfigModule,
 		ScheduleModule.forRoot(),
-		BossModule,
-		S3Module,
+		// BossModule,
+		// S3Module,
 		CommonModule,
 		PrismaModule,
 		// authentication
 		AuthModule,
-		ImageClassificationModule,
+		WorkspacesModule,
+		DataRequestsModule,
 	],
 })
 export class AppModule implements NestModule {

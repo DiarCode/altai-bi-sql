@@ -30,4 +30,68 @@ export class PromptBuilderService {
 			maxTokens: tpl.maxTokens,
 		}
 	}
+
+	buildSqlPrompt(prompt: string, metadata: unknown, foreignKeys: unknown): BuiltPrompt {
+		const tpl = this.registry.get('sql-generate')
+		const user = tpl.user
+			.replace(/{{prompt}}/g, prompt)
+			.replace(/{{metadata}}/g, JSON.stringify(metadata, null, 2))
+			.replace(/{{foreignKeys}}/g, JSON.stringify(foreignKeys, null, 2))
+		return {
+			messages: [
+				{ role: 'system', content: tpl.system.trim() },
+				{ role: 'user', content: user.trim() },
+			],
+			maxTokens: tpl.maxTokens,
+		}
+	}
+
+	buildResultTextPrompt(rows: unknown[]): BuiltPrompt {
+		const tpl = this.registry.get('result-text')
+		const user = tpl.user.replace(/{{rows}}/g, JSON.stringify(rows, null, 2))
+		return {
+			messages: [
+				{ role: 'system', content: tpl.system.trim() },
+				{ role: 'user', content: user.trim() },
+			],
+			maxTokens: tpl.maxTokens,
+		}
+	}
+
+	buildGraphConfigPrompt(rows: unknown[]): BuiltPrompt {
+		const tpl = this.registry.get('graph-config')
+		const user = tpl.user.replace(/{{rows}}/g, JSON.stringify(rows, null, 2))
+		return {
+			messages: [
+				{ role: 'system', content: tpl.system.trim() },
+				{ role: 'user', content: user.trim() },
+			],
+			maxTokens: tpl.maxTokens,
+		}
+	}
+
+	buildBusinessNamesPrompt(
+		schema: string,
+		table: string,
+		columns: Array<{
+			columnName: string
+			dataType: string
+			isPrimaryKey?: boolean
+			isForeignKey?: boolean
+			isNullable?: boolean
+		}>,
+	): BuiltPrompt {
+		const tpl = this.registry.get('business-names')
+		const user = tpl.user
+			.replace(/{{schema}}/g, schema)
+			.replace(/{{table}}/g, table)
+			.replace(/{{columns}}/g, JSON.stringify(columns, null, 2))
+		return {
+			messages: [
+				{ role: 'system', content: tpl.system.trim() },
+				{ role: 'user', content: user.trim() },
+			],
+			maxTokens: tpl.maxTokens,
+		}
+	}
 }
