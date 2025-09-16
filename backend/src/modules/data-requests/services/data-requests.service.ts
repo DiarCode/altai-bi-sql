@@ -38,6 +38,40 @@ export class DataRequestsService {
 		}
 	}
 
+	async getAll(userId: number, workspaceId: number) {
+		await this.ensureWorkspace(userId, workspaceId)
+		const reqs = await this.prisma.userRequest.findMany({
+			where: { workspaceId },
+			orderBy: { id: 'desc' },
+			take: 50,
+		})
+		return reqs.map(req => ({
+			requestId: req.id,
+			status: req.status,
+			sqlScript: req.sqlScript ?? undefined,
+			resultText: req.resultText ?? undefined,
+			resultTable: this.parseColumnarTable(req.resultTable),
+			graphConfig: req.graphConfig ?? undefined,
+		}))
+	}
+
+	async getLatest(userId: number, workspaceId: number) {
+		await this.ensureWorkspace(userId, workspaceId)
+		const req = await this.prisma.userRequest.findFirst({
+			where: { workspaceId },
+			orderBy: { id: 'desc' },
+		})
+		if (!req) throw new NotFoundException('No requests yet')
+		return {
+			requestId: req.id,
+			status: req.status,
+			sqlScript: req.sqlScript ?? undefined,
+			resultText: req.resultText ?? undefined,
+			resultTable: this.parseColumnarTable(req.resultTable),
+			graphConfig: req.graphConfig ?? undefined,
+		}
+	}
+
 	async createAndExecute(userId: number, workspaceId: number, prompt: string) {
 		await this.ensureWorkspace(userId, workspaceId)
 		const ds = await this.getDataSourceOrThrow(workspaceId)

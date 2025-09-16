@@ -33,6 +33,15 @@ export class DataRequestsController {
 		return this.service.createAndExecute(user.id, workspaceId, dto.prompt)
 	}
 
+	@Get('latest')
+	@ApiResponse({ status: 200, description: 'Latest request', type: DataRequestResultDto })
+	async getLatest(
+		@GetCurrentUser() user: UserClaims,
+		@Param('workspaceId', ParseIntPipe) workspaceId: number,
+	): Promise<DataRequestResultDto> {
+		return this.service.getLatest(user.id, workspaceId)
+	}
+
 	@Get(':id')
 	@ApiResponse({ status: 200, description: 'Request status/result', type: DataRequestResultDto })
 	async getOne(
@@ -41,5 +50,14 @@ export class DataRequestsController {
 		@Param('id', ParseIntPipe) id: number,
 	): Promise<DataRequestResultDto> {
 		return this.service.getOne(user.id, workspaceId, id)
+	}
+
+	@Get()
+	@ApiResponse({ status: 200, description: 'List recent requests', type: [DataRequestResultDto] })
+	async getAll(
+		@GetCurrentUser() user: UserClaims,
+		@Param('workspaceId', ParseIntPipe) workspaceId: number,
+	) {
+		return this.service.getAll(user.id, workspaceId)
 	}
 }
