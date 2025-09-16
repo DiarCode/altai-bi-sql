@@ -236,7 +236,7 @@ const numericCols = computed<Set<string>>(() => {
 								<TableRow
 									v-for="(row, i) in bundle.response.rows"
 									:key="i"
-									class="even:bg-white/5 hover:bg-white/10 transition-colors border-b border-white/10 last:border-b-0"
+									class="even:bg-white/5 hover:bg-white/10 transition-colors duration-300 border-b border-white/10 last:border-b-0"
 								>
 									<TableCell
 										v-for="col in bundle.response.columns"
@@ -268,6 +268,6 @@ const numericCols = computed<Set<string>>(() => {
 </template>
 
 <style scoped>
-.fade-enter-active, .fade-leave-active { transition: all .3s ease; }
+.fade-enter-active, .fade-leave-active { transition: all .5s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(-10px); }
 </style>

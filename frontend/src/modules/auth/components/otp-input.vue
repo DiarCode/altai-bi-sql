@@ -97,7 +97,7 @@ const updateModelValue = () => {
 			inputmode="numeric"
 			pattern="[0-9]*"
 			maxlength="1"
-			class="w-12 h-12 text-center text-xl font-semibold border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background text-foreground"
+			class="w-12 h-12 text-center text-xl font-bold border border-white/30 rounded-xl bg-white/10 text-white placeholder:text-slate-300/70 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-400/50 transition-all duration-300"
 			@input="handleInput($event, index)"
 			@keydown="handleKeyDown($event, index)"
 			@paste="handlePaste"

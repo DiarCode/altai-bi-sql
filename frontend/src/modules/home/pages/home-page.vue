@@ -69,17 +69,17 @@ const workspaceName = computed(() => activeWorkspace.value?.name ?? '—');
 								<DropdownMenuLabel class="text-slate-400">Рабочие места</DropdownMenuLabel>
 
 								<DropdownMenuItem
-									class="cursor-pointer hover:bg-slate-500/10! hover:text-slate-200/80! text-slate-200"
+									class="cursor-pointer hover:bg-slate-500/10! hover:text-slate-200/80! text-slate-200 transition-all duration-300"
 								>
 									Workpace 1
 								</DropdownMenuItem>
 								<DropdownMenuItem
-									class="cursor-pointer hover:bg-slate-500/10! hover:text-slate-200/80! text-slate-200"
+									class="cursor-pointer hover:bg-slate-500/10! hover:text-slate-200/80! text-slate-200 transition-all duration-300"
 								>
 									Workpace 2
 								</DropdownMenuItem>
 								<DropdownMenuItem
-									class="cursor-pointer hover:bg-slate-500/10! hover:text-slate-200/80! text-slate-200"
+									class="cursor-pointer hover:bg-slate-500/10! hover:text-slate-200/80! text-slate-200 transition-all duration-300"
 								>
 									Workpace 3
 								</DropdownMenuItem>
@@ -88,7 +88,7 @@ const workspaceName = computed(() => activeWorkspace.value?.name ?? '—');
 							<DropdownMenuSeparator class="bg-slate-300" />
 
 							<DropdownMenuItem
-								class="cursor-pointer hover:bg-slate-500/10! hover:text-slate-200/80! text-slate-200"
+								class="cursor-pointer hover:bg-slate-500/10! hover:text-slate-200/80! text-slate-200 transition-all duration-300"
 							>
 								<Plus class="size-5 text-slate-200" /> Добавить
 							</DropdownMenuItem>
@@ -121,14 +121,14 @@ const workspaceName = computed(() => activeWorkspace.value?.name ?? '—');
 						<DropdownMenuContent class="bg-slate-600/5 border border-white/15 backdrop-blur-md">
 							<DropdownMenuItem
 								v-if="!connectedReadonly"
-								class="cursor-pointer hover:bg-slate-500/10! hover:text-slate-200/80! text-slate-200"
+								class="cursor-pointer hover:bg-slate-500/10! hover:text-slate-200/80! text-slate-200 transition-all duration-300"
 							>
 								<Plus class="size-5 text-slate-200" /> Добавить
 							</DropdownMenuItem>
 
 							<DropdownMenuItem
 								v-if="connectedReadonly"
-								class="cursor-pointer hover:bg-slate-500/10! hover:text-slate-200/80! text-slate-200"
+								class="cursor-pointer hover:bg-slate-500/10! hover:text-slate-200/80! text-slate-200 transition-all duration-300"
 							>
 								<Pencil class="size-5 text-slate-200" /> Изменить
 							</DropdownMenuItem>
@@ -147,7 +147,7 @@ const workspaceName = computed(() => activeWorkspace.value?.name ?? '—');
 
 						<DropdownMenuContent class=" bg-slate-500/5 border border-white/15 backdrop-blur-md">
 							<DropdownMenuItem
-								class="text-destructive cursor-pointer hover:bg-slate-500/10! hover:text-destructive/80!"
+								class="text-destructive cursor-pointer hover:bg-slate-500/10! hover:text-destructive/80! transition-all duration-300"
 							>
 								<LogOut class="text-destructive size-5" /> Выйти
 							</DropdownMenuItem>
@@ -193,7 +193,7 @@ const workspaceName = computed(() => activeWorkspace.value?.name ?? '—');
 							<Button
 								variant="ghost"
 								size="lg"
-								class="text-slate-200 hover:text-white hover:bg-white/10 font-semibold"
+								class="text-slate-200 hover:text-white hover:bg-white/10 font-semibold transition-all duration-300"
 								@click="clearHistory"
 							>
 								Clear History
