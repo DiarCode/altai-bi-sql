@@ -4,7 +4,7 @@ import { computed } from 'vue';
 
 
 
-import BG_URL from '@/core/assets/images/home-bg.jpg';
+import BG_URL from '@/core/assets/images/home-bg.avif';
 import { Avatar, AvatarFallback } from "@/core/components/ui/avatar";
 import { Button } from '@/core/components/ui/button';
 import { Card } from '@/core/components/ui/card';
@@ -51,7 +51,7 @@ const workspaceName = computed(() => activeWorkspace.value?.name ?? '—');
 					<DropdownMenu>
 						<DropdownMenuTrigger>
 							<button
-								class="cursor-pointer inline-flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 backdrop-blur-md"
+								class="cursor-pointer inline-flex items-center gap-4 rounded-2xl border border-white/10 bg-white/10 px-3 py-3 backdrop-blur-lg"
 								title="Workspace"
 							>
 								<div class="flex items-center gap-2">
@@ -98,7 +98,7 @@ const workspaceName = computed(() => activeWorkspace.value?.name ?? '—');
 					<DropdownMenu>
 						<DropdownMenuTrigger>
 							<button
-								class="cursor-pointer inline-flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 backdrop-blur-md"
+								class="cursor-pointer inline-flex items-center gap-4 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur-md"
 								title="Database Connection"
 							>
 								<div class="flex items-center gap-2">
@@ -137,9 +137,9 @@ const workspaceName = computed(() => activeWorkspace.value?.name ?? '—');
 
 					<DropdownMenu>
 						<DropdownMenuTrigger>
-							<Avatar class="size-10">
+							<Avatar class="size-11 rounded-md">
 								<AvatarFallback
-									class="bg-slate-500/5 border border-white/15 backdrop-blur-md text-white text-sm"
+									class="bg-white/10 rounded-md border border-white/15 backdrop-blur-md text-white text-sm"
 									>CN</AvatarFallback
 								>
 							</Avatar>
@@ -158,7 +158,7 @@ const workspaceName = computed(() => activeWorkspace.value?.name ?? '—');
 
 			<!-- Enhanced Glass card container -->
 			<Card
-				class="relative w-full overflow-hidden p-0 rounded-3xl border border-white/20 bg-slate-100/5 backdrop-blur-lg"
+				class="relative w-full overflow-hidden p-0 rounded-3xl border border-white/20 bg-slate-300/10 backdrop-blur-lg"
 			>
 				<RequestComposer @submit="submitPrompt" />
 
