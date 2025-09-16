@@ -26,6 +26,7 @@ export class PromptRegistry {
 			Output JSON strictly as {"sql":"..."}.`,
 			maxTokens: 10240,
 		},
+
 		'result-text': {
 			system: `You are a formatter. 
 			Given rows (JSON array of objects) from a BI query, produce a short human-friendly summary in English or Russian (depending on data). 
@@ -36,11 +37,12 @@ export class PromptRegistry {
 			user: `Rows (JSON):\n{{rows}}\n\nWrite the summary text only.`,
 			maxTokens: 10240,
 		},
+
 		'graph-config': {
 			system: `You are a data viz planner. 
 			Given tabular rows (JSON array of objects), propose a compact graph configuration JSON for a dashboard. 
 			Rules:\n
-			- Choose one of graph types: BAR_CHART | LINE_CHART | PIE_CHART | SCATTER_PLOT | AREA_CHART | HISTOGRAM | BOX_PLOT | HEATMAP | GEOGRAPHIC_MAP | RADAR_CHART | BUBBLE_CHART | FUNNEL_CHART | TREE_MAP.\n
+			- Choose one of graph types: BAR_CHART | LINE_CHART.\n
 			- Include fields: 
 			{ "type": GRAPH_TYPE, "x": string, "y": string | string[], "seriesBy"?: string }.\n
 			 - Pick fields that exist in rows.\n
@@ -48,6 +50,7 @@ export class PromptRegistry {
 			user: `Rows (JSON):\n{{rows}}`,
 			maxTokens: 10240,
 		},
+
 		'business-names': {
 			system: `You are a precise data modeling assistant. 
 				Given a database table (schema + technical name) and its columns (technical names, data types, and key flags), propose business-friendly names and a concise description for the table and each column. 

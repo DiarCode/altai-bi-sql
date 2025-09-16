@@ -105,6 +105,9 @@ export class DataRequestsService {
 		rows = this.limitRowsAndSize(rows, 100, 200 * 1024)
 		rows = this.maskPII(rows)
 
+		// 5.1. Rename technical column names to business names where unambiguous
+		rows = this.applyBusinessNamesToRows(rows, metadata)
+
 		// 6. Build resultTable
 		const result = this.rowsToColumnar(rows)
 		const responseId = uuidv4()
@@ -262,6 +265,53 @@ export class DataRequestsService {
 		const m = s.match(fence)
 		if (m) return m[1].trim()
 		return s
+	}
+
+	// Map technical column names to business names where there is a unique mapping in metadata
+	private applyBusinessNamesToRows(
+		rows: Array<Record<string, unknown>>,
+		metadata: Array<{
+			id: number
+			workspaceId: number
+			schemaName: string
+			tableName: string
+			businessName: string | null
+			description: string | null
+			columns: Array<{
+				id: number
+				tableId: number
+				columnName: string
+				businessName: string | null
+				description: string | null
+			}>
+		}>,
+	): Array<Record<string, unknown>> {
+		// Build a map of technical column name -> business name ONLY if the business name is unique across all columns
+		const bizNameCount = new Map<string, number>()
+		for (const t of metadata) {
+			for (const c of t.columns) {
+				if (c.businessName && c.businessName.trim()) {
+					bizNameCount.set(c.businessName, (bizNameCount.get(c.businessName) || 0) + 1)
+				}
+			}
+		}
+		const techToBiz = new Map<string, string>()
+		for (const t of metadata) {
+			for (const c of t.columns) {
+				if (c.businessName && bizNameCount.get(c.businessName) === 1) {
+					techToBiz.set(c.columnName, c.businessName)
+				}
+			}
+		}
+		if (techToBiz.size === 0) return rows
+		return rows.map(r => {
+			const out: Record<string, unknown> = {}
+			for (const [k, v] of Object.entries(r)) {
+				const renamed = techToBiz.get(k) || k
+				out[renamed] = v
+			}
+			return out
+		})
 	}
 
 	private limitRowsAndSize(
