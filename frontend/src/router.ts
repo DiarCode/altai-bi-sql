@@ -14,8 +14,9 @@ const routes: RouteRecordRaw[] = [
 		name: 'welcome',
 		component: () => import('@/modules/welcome/pages/welcome-page.vue'),
 		meta: {
-			title: 'CarScan - Добро пожаловать',
-			description: 'Добро пожаловать в CarScan - ваш надежный помощник в диагностике автомобилей.',
+			title: 'BusinessAI - Добро пожаловать',
+			description:
+				'Добро пожаловать в BusinessAI - ваш надежный помощник в диагностике автомобилей.',
 			layout: 'blank',
 			requiresAuth: false,
 		},
@@ -26,8 +27,8 @@ const routes: RouteRecordRaw[] = [
 		name: 'login',
 		component: () => import('@/modules/auth/pages/login-page.vue'),
 		meta: {
-			title: 'CarScan - Вход',
-			description: 'Войдите в ваш аккаунт CarScan',
+			title: 'BusinessAI - Вход',
+			description: 'Войдите в ваш аккаунт BusinessAI',
 			layout: 'blank',
 			requiresAuth: false,
 		},
@@ -38,8 +39,8 @@ const routes: RouteRecordRaw[] = [
 		name: 'register',
 		component: () => import('@/modules/auth/pages/register-page.vue'),
 		meta: {
-			title: 'CarScan - Регистрация',
-			description: 'Создайте новый аккаунт CarScan',
+			title: 'BusinessAI - Регистрация',
+			description: 'Создайте новый аккаунт BusinessAI',
 			layout: 'blank',
 			requiresAuth: false,
 		},
@@ -50,8 +51,8 @@ const routes: RouteRecordRaw[] = [
 		name: 'home',
 		component: () => import('@/modules/home/pages/home-page.vue'),
 		meta: {
-			title: 'CarScan - Главная',
-			description: 'Главная страница приложения CarScan.',
+			title: 'BusinessAI - Главная',
+			description: 'Главная страница приложения BusinessAI.',
 			layout: 'blank',
 			requiresAuth: true,
 		},
@@ -78,7 +79,7 @@ const AUTH_ROUTE_NAMES = new Set(['login', 'register', 'welcome'])
 
 router.beforeEach(async to => {
 	// 1) Apply document title/description from meta
-	const title = (to.meta?.title as string) || 'CarScan'
+	const title = (to.meta?.title as string) || 'BusinessAI'
 	if (title) document.title = title
 
 	const desc = to.meta?.description as string | undefined
@@ -104,13 +105,13 @@ router.beforeEach(async to => {
 	const isAuthPage = AUTH_ROUTE_NAMES.has((to.name as string) || '')
 
 	// 3) Guard: block auth-required routes
-	if (requiresAuth && !user) {
-		return {
-			name: 'login',
-			query: { redirect: to.fullPath }, // so we can bounce back after login
-			replace: true,
-		}
-	}
+	// if (requiresAuth && !user) {
+	// 	return {
+	// 		name: 'login',
+	// 		query: { redirect: to.fullPath }, // so we can bounce back after login
+	// 		replace: true,
+	// 	}
+	// }
 
 	// 4) Guard: prevent visiting auth pages if already logged in
 	if (!requiresAuth && isAuthPage && user) {
