@@ -17,10 +17,10 @@ async function bootstrap() {
 	app.use(cookieParser())
 
 	const config = new DocumentBuilder()
-		.setTitle('altai-bi-sql API')
-		.setDescription('altai-bi-sql API Documentation')
+		.setTitle('bi API')
+		.setDescription('bi API Documentation')
 		.setVersion('1.0')
-		.addTag('altai-bi-sql')
+		.addTag('bi')
 		.build()
 	const documentFactory = () => SwaggerModule.createDocument(app, config)
 	SwaggerModule.setup('api', app, documentFactory)

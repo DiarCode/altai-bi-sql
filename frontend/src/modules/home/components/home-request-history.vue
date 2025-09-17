@@ -1,6 +1,12 @@
 <script setup lang="ts">
-import type { RequestBundle } from '../models/bi.models';
+import type { GraphSpec } from "@/modules/home/models/bi.models";
+
+
+
 import ResultCard from './home-result-card.vue';
+
+
+
 
 
 

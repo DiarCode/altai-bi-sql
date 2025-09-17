@@ -1,60 +1,66 @@
-import { ref, reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+
+import type {
+	AuthState,
+	LoginRequest,
+	OtpVerificationRequest,
+	RegisterRequest,
+} from '../models/auth.models'
 import { authService } from '../services/auth.service'
-import type { LoginRequest, RegisterRequest, OtpVerificationRequest, AuthState } from '../models/auth.models'
 
 export function useAuth() {
 	const router = useRouter()
-	
+
 	const authState = reactive<AuthState>({
 		isAuthenticated: false,
 		user: null,
 		currentStep: 'phone',
 		phoneNumber: '',
 		isLoading: false,
-		error: null
+		error: null,
 	})
-	
+
 	const registerData = reactive({
 		fullName: '',
-		phoneNumber: ''
+		phoneNumber: '',
 	})
-	
+
 	const otpCode = ref('')
-	
+
 	const login = async (phoneNumber: string) => {
 		authState.isLoading = true
 		authState.error = null
-		
+
 		try {
 			const request: LoginRequest = { phoneNumber }
 			const response = await authService.login(request)
-			
+
 			if (response.success) {
 				authState.phoneNumber = phoneNumber
 				authState.currentStep = 'otp'
 			} else {
 				authState.error = response.message
 			}
-		} catch (err) {
+		} catch {
 			authState.error = 'Произошла ошибка при входе'
 		} finally {
 			authState.isLoading = false
 		}
 	}
-	
+
 	const register = async () => {
 		authState.isLoading = true
 		authState.error = null
-		
+
 		try {
 			const request: RegisterRequest = {
 				phoneNumber: registerData.phoneNumber,
-				fullName: registerData.fullName
+				fullName: registerData.fullName,
 			}
-			
+
 			const response = await authService.register(request)
-			
+
 			if (response.success) {
 				authState.phoneNumber = registerData.phoneNumber
 				authState.currentStep = 'otp'
@@ -62,25 +68,25 @@ export function useAuth() {
 			} else {
 				authState.error = response.message
 			}
-		} catch (err) {
+		} catch {
 			authState.error = 'Произошла ошибка при регистрации'
 		} finally {
 			authState.isLoading = false
 		}
 	}
-	
+
 	const verifyOtp = async () => {
 		authState.isLoading = true
 		authState.error = null
-		
+
 		try {
 			const request: OtpVerificationRequest = {
 				phoneNumber: authState.phoneNumber,
-				otp: otpCode.value
+				otp: otpCode.value,
 			}
-			
+
 			const response = await authService.verifyOtp(request)
-			
+
 			if (response.success && response.user) {
 				authState.isAuthenticated = true
 				authState.user = response.user
@@ -89,13 +95,13 @@ export function useAuth() {
 			} else {
 				authState.error = response.message
 			}
-		} catch (err) {
+		} catch {
 			authState.error = 'Произошла ошибка при проверке кода'
 		} finally {
 			authState.isLoading = false
 		}
 	}
-	
+
 	const logout = async () => {
 		try {
 			await authService.logout()
@@ -112,7 +118,7 @@ export function useAuth() {
 			console.error('Logout error:', err)
 		}
 	}
-	
+
 	const resetAuthState = () => {
 		authState.currentStep = 'phone'
 		authState.phoneNumber = ''
@@ -128,6 +134,6 @@ export function useAuth() {
 		register,
 		verifyOtp,
 		logout,
-		resetAuthState
+		resetAuthState,
 	}
 }

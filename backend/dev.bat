@@ -26,7 +26,6 @@ REM 3) Run migrations
 echo.
 echo [3/4] 🚧 Running database migrations...
 bun run prisma:migrate
-bun run prisma:seed
 if errorlevel 1 goto :error
 
 REM 4) Start dev server
