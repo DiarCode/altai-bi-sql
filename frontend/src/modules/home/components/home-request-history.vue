@@ -1,12 +1,6 @@
 <script setup lang="ts">
-import type { GraphSpec } from "@/modules/home/models/bi.models";
-
-
-
+import type { RequestBundle } from '../models/history.models';
 import ResultCard from './home-result-card.vue';
-
-
-
 
 
 
@@ -15,7 +9,7 @@ import ResultCard from './home-result-card.vue';
 defineProps<{
   items: RequestBundle[];
   onRetry?: (b: RequestBundle) => void;
-}>();
+}>()
 </script>
 
 <template>

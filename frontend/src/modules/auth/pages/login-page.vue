@@ -66,8 +66,14 @@ const handleOtpComplete = (otp: string) => {
 }
 
 const handleOtpSubmit = async () => {
+  try {
   if (otpCode.value.length !== 4) return
   await verifyOtp()
+  				router.push('/app/home')
+
+  } catch {
+    console.log()
+  }
 }
 
 const goToRegister = () => {
@@ -82,7 +88,7 @@ const goBack = () => {
 
 <template>
 	<div
-		class="relative min-h-screen w-full bg-cover bg-center bg-fixed"
+		class="relative bg-cover bg-center bg-fixed w-full min-h-screen"
 		:style="{ backgroundImage: `url(${BG_URL})` }"
 	>
 		<!-- Enhanced overlay with gradient -->
@@ -90,26 +96,26 @@ const goBack = () => {
 			class="absolute inset-0 bg-gradient-to-br from-slate-950/50 via-slate-900/40 to-blue-950/30"
 		/>
 
-		<main class="relative z-10 flex min-h-screen items-center justify-center px-6 py-8">
+		<main class="z-10 relative flex justify-center items-center px-6 py-8 min-h-screen">
 			<!-- Login Card -->
 			<Card
-				class="w-full max-w-md overflow-hidden rounded-3xl border border-white/20 bg-slate-100/5 backdrop-blur-lg"
+				class="bg-slate-100/5 backdrop-blur-lg border border-white/20 rounded-3xl w-full max-w-md overflow-hidden"
 			>
 				<div class="p-8">
 					<!-- Phone Step -->
 					<div v-if="authState.currentStep === 'phone'">
 						<!-- Header -->
 						<div class="mb-8 text-center">
-							<h1 class="text-3xl font-bold text-white mb-2">Login to System</h1>
+							<h1 class="mb-2 font-bold text-white text-3xl">Login to System</h1>
 							<p class="text-slate-300 text-base">Enter your phone number to receive a code</p>
 						</div>
 
 						<!-- Error Message -->
 						<div
 							v-if="authState.error"
-							class="mb-6 p-4 rounded-2xl border border-rose-400/40 bg-gradient-to-br from-rose-500/15 to-rose-600/10 backdrop-blur-sm"
+							class="bg-gradient-to-br from-rose-500/15 to-rose-600/10 backdrop-blur-sm mb-6 p-4 border border-rose-400/40 rounded-2xl"
 						>
-							<p class="text-rose-200 text-sm font-medium">
+							<p class="font-medium text-rose-200 text-sm">
 								{{ authState.error }}
 							</p>
 						</div>
@@ -123,7 +129,7 @@ const goBack = () => {
 							<div class="space-y-2">
 								<Label
 									for="phone"
-									class="text-white font-medium flex items-center gap-2"
+									class="flex items-center gap-2 font-medium text-white"
 								>
 									<Phone class="w-4 h-4" />
 									Phone Number
@@ -133,7 +139,7 @@ const goBack = () => {
 									v-model="phoneInput"
 									type="tel"
 									placeholder="+7 701 234 5678"
-									class="h-12 border-white/30 bg-white/10 text-white placeholder:text-slate-300/70 backdrop-blur-sm focus:border-blue-400/50 focus:ring-blue-400/50"
+									class="bg-white/10 backdrop-blur-sm border-white/30 focus:border-blue-400/50 focus:ring-blue-400/50 h-12 text-white placeholder:text-slate-300/70"
 									@input="handlePhoneInput"
 									required
 								/>
@@ -143,12 +149,12 @@ const goBack = () => {
 							<Button
 								type="submit"
 								:disabled="!isValidPhone || authState.isLoading"
-								class="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+								class="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 shadow-lg hover:shadow-xl rounded-xl w-full h-12 font-semibold text-white hover:scale-[1.02] transition-all duration-300 disabled:cursor-not-allowed transform"
 							>
 								<span v-if="authState.isLoading">Sending...</span>
 								<span
 									v-else
-									class="flex items-center justify-center gap-2"
+									class="flex justify-center items-center gap-2"
 								>
 									Get Code
 									<ArrowRight class="w-4 h-4" />
@@ -157,12 +163,12 @@ const goBack = () => {
 						</form>
 
 						<!-- Register Link -->
-						<div class="mt-8 pt-6 border-t border-white/20">
-							<p class="text-center text-slate-300">
+						<div class="mt-8 pt-6 border-white/20 border-t">
+							<p class="text-slate-300 text-center">
 								Don't have an account?
 								<button
 									@click="goToRegister"
-									class="text-blue-400 hover:text-blue-300 font-semibold transition-colors duration-300 ml-1"
+									class="ml-1 font-semibold text-blue-400 hover:text-blue-300 transition-colors duration-300"
 								>
 									Sign Up
 								</button>
@@ -174,16 +180,16 @@ const goBack = () => {
 					<div v-else-if="authState.currentStep === 'otp'">
 						<!-- Header -->
 						<div class="mb-8 text-center">
-							<h1 class="text-3xl font-bold text-white mb-2">Enter Code</h1>
+							<h1 class="mb-2 font-bold text-white text-3xl">Enter Code</h1>
 							<p class="text-slate-300 text-base">Code sent to {{ authState.phoneNumber }}</p>
 						</div>
 
 						<!-- Error Message -->
 						<div
 							v-if="authState.error"
-							class="mb-6 p-4 rounded-2xl border border-rose-400/40 bg-gradient-to-br from-rose-500/15 to-rose-600/10 backdrop-blur-sm"
+							class="bg-gradient-to-br from-rose-500/15 to-rose-600/10 backdrop-blur-sm mb-6 p-4 border border-rose-400/40 rounded-2xl"
 						>
-							<p class="text-rose-200 text-sm font-medium">
+							<p class="font-medium text-rose-200 text-sm">
 								{{ authState.error }}
 							</p>
 						</div>
@@ -195,7 +201,7 @@ const goBack = () => {
 						>
 							<!-- OTP Input -->
 							<div class="space-y-4">
-								<Label class="text-white font-medium flex items-center justify-center gap-2">
+								<Label class="flex justify-center items-center gap-2 font-medium text-white">
 									<Key class="w-4 h-4" />
 									Verification Code
 								</Label>
@@ -203,7 +209,7 @@ const goBack = () => {
 									v-model="otpCode"
 									@complete="handleOtpComplete"
 								/>
-								<p class="text-center text-sm text-slate-400">
+								<p class="text-slate-400 text-sm text-center">
 									Enter code <span class="font-mono font-bold">1111</span> for testing
 								</p>
 							</div>
@@ -212,12 +218,12 @@ const goBack = () => {
 							<Button
 								type="submit"
 								:disabled="otpCode.length !== 4 || authState.isLoading"
-								class="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+								class="bg-blue-600 hover:bg-blue-700 shadow-lg hover:shadow-xl rounded-xl w-full h-12 font-semibold text-white hover:scale-[1.02] transition-all duration-300 transform"
 							>
 								<span v-if="authState.isLoading">Verifying...</span>
 								<span
 									v-else
-									class="flex items-center justify-center gap-2"
+									class="flex justify-center items-center gap-2"
 								>
 									Login
 									<ArrowRight class="w-4 h-4" />
@@ -230,7 +236,7 @@ const goBack = () => {
 							<Button
 								@click="goBack"
 								variant="outline"
-								class="w-full border-white/30 bg-white/10 text-white hover:bg-white/20 transition-all duration-300"
+								class="bg-white/10 hover:bg-white/20 border-white/30 w-full text-white transition-all duration-300"
 							>
 								Back
 							</Button>

@@ -1,24 +1,23 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
-import { PrismaService } from 'src/prisma/prisma.service'
+import { DATA_SOURCE_TYPE, Prisma, USER_REQUEST_STATUS, WorkspaceDataSource } from '@prisma/client'
+import { Connection, createConnection, RowDataPacket } from 'mysql2/promise'
+import { Client as PgClient, QueryResult } from 'pg'
+import { LlmClientService } from 'src/common/llm/llm.client'
+import { PromptBuilderService } from 'src/common/llm/prompt.builder'
 import { EncryptionService } from 'src/common/services/encryption.service'
 import { SqlGuardService } from 'src/modules/sql-guard/sql-guard.service'
-import { PromptBuilderService } from 'src/common/llm/prompt.builder'
-import { LlmClientService } from 'src/common/llm/llm.client'
-import { DATA_SOURCE_TYPE, Prisma, WorkspaceDataSource, USER_REQUEST_STATUS } from '@prisma/client'
-import { PostgresConfig, MysqlConfig } from '../../workspaces/types/data-source.types'
+import { PrismaService } from 'src/prisma/prisma.service'
 import { v4 as uuidv4 } from 'uuid'
-import { Client as PgClient, QueryResult } from 'pg'
-import { createConnection, Connection, RowDataPacket } from 'mysql2/promise'
-import { ColumnarTable } from '../types/result.types'
+import { MysqlConfig, PostgresConfig } from '../../workspaces/types/data-source.types'
+import { DataRequestResultDto } from '../dtos/data-requests.dto'
 import {
-	stripCodeFences,
+	asJsonObject,
 	limitRowsAndSize,
 	maskPII,
-	rowsToColumnar,
-	asJsonObject,
 	parseColumnarTable,
+	rowsToColumnar,
+	stripCodeFences,
 } from '../utils/result-processing.util'
-import { DataRequestResultDto } from '../dtos/data-requests.dto'
 
 @Injectable()
 export class DataRequestsService {
@@ -53,6 +52,7 @@ export class DataRequestsService {
 		})
 		return reqs.map(req => ({
 			requestId: req.id,
+			prompt: req.prompt,
 			status: req.status,
 			sqlScript: req.sqlScript ?? undefined,
 			resultText: req.resultText ?? undefined,
@@ -374,6 +374,4 @@ export class DataRequestsService {
 			typeof (x as MysqlConfig).password === 'string'
 		)
 	}
-
-
 }

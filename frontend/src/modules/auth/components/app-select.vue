@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue';
+
+
+
+
 
 interface Option {
 	value: string
@@ -55,11 +59,11 @@ const selectClasses = computed(() => {
 		'pr-10',
 		'cursor-pointer'
 	]
-	
+
 	const borderClasses = props.error
 		? ['border-destructive', 'focus:border-destructive']
 		: ['border-border', 'focus:border-primary']
-	
+
 	return [...baseClasses, ...borderClasses].join(' ')
 })
 
@@ -77,9 +81,13 @@ const handleChange = (event: Event) => {
 			class="block text-sm font-medium text-foreground"
 		>
 			{{ label }}
-			<span v-if="required" class="text-destructive">*</span>
+			<span
+				v-if="required"
+				class="text-destructive"
+				>*</span
+			>
 		</label>
-		
+
 		<div class="relative">
 			<select
 				:id="selectId"
@@ -89,7 +97,12 @@ const handleChange = (event: Event) => {
 				:class="selectClasses"
 				@change="handleChange"
 			>
-				<option value="" disabled>{{ placeholder }}</option>
+				<option
+					value=""
+					disabled
+				>
+					{{ placeholder }}
+				</option>
 				<option
 					v-for="option in options"
 					:key="option.value"
@@ -98,20 +111,36 @@ const handleChange = (event: Event) => {
 					{{ option.label }}
 				</option>
 			</select>
-			
+
 			<!-- Custom dropdown arrow -->
 			<div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-				<svg class="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+				<svg
+					class="w-5 h-5 text-muted-foreground"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M19 9l-7 7-7-7"
+					></path>
 				</svg>
 			</div>
 		</div>
-		
-		<p v-if="error" class="text-sm text-destructive">
+
+		<p
+			v-if="error"
+			class="text-sm text-destructive"
+		>
 			{{ error }}
 		</p>
-		
-		<p v-if="hint && !error" class="text-sm text-muted-foreground">
+
+		<p
+			v-if="hint && !error"
+			class="text-sm text-muted-foreground"
+		>
 			{{ hint }}
 		</p>
 	</div>

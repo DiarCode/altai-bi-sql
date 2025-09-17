@@ -1,9 +1,16 @@
 <script setup lang="ts">
-import type { DialogTitleProps } from "reka-ui"
-import type { HTMLAttributes } from "vue"
-import { reactiveOmit } from "@vueuse/core"
-import { DialogTitle, useForwardProps } from "reka-ui"
-import { cn } from '@/core/utils/tailwind.utils'
+import { reactiveOmit } from "@vueuse/core";
+import type { DialogTitleProps } from "reka-ui";
+import { DialogTitle, useForwardProps } from "reka-ui";
+import type { HTMLAttributes } from "vue";
+
+
+
+import { cn } from '@/core/utils/tailwind.utils';
+
+
+
+
 
 const props = defineProps<DialogTitleProps & { class?: HTMLAttributes["class"] }>()
 
@@ -12,11 +19,11 @@ const forwardedProps = useForwardProps(delegatedProps)
 </script>
 
 <template>
-  <DialogTitle
-    data-slot="dialog-title"
-    v-bind="forwardedProps"
-    :class="cn('text-lg font-semibold leading-none tracking-tight text-white', props.class)"
-  >
-    <slot />
-  </DialogTitle>
+	<DialogTitle
+		data-slot="dialog-title"
+		v-bind="forwardedProps"
+		:class="cn('text-lg font-semibold leading-none tracking-tight text-white', props.class)"
+	>
+		<slot />
+	</DialogTitle>
 </template>

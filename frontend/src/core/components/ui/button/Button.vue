@@ -1,10 +1,20 @@
 <script setup lang="ts">
-import type { PrimitiveProps } from "reka-ui"
-import type { HTMLAttributes } from "vue"
-import type { ButtonVariants } from "."
-import { Primitive } from "reka-ui"
-import { cn } from '@/core/utils/tailwind.utils'
-import { buttonVariants } from "."
+import type { PrimitiveProps } from "reka-ui";
+import { Primitive } from "reka-ui";
+import type { HTMLAttributes } from "vue";
+
+
+
+import { cn } from '@/core/utils/tailwind.utils';
+
+
+
+import type { ButtonVariants } from ".";
+import { buttonVariants } from ".";
+
+
+
+
 
 interface Props extends PrimitiveProps {
   variant?: ButtonVariants["variant"]
@@ -18,12 +28,12 @@ const props = withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
-  <Primitive
-    data-slot="button"
-    :as="as"
-    :as-child="asChild"
-    :class="cn(buttonVariants({ variant, size }), props.class)"
-  >
-    <slot />
-  </Primitive>
+	<Primitive
+		data-slot="button"
+		:as="as"
+		:as-child="asChild"
+		:class="cn(buttonVariants({ variant, size }), props.class)"
+	>
+		<slot />
+	</Primitive>
 </template>

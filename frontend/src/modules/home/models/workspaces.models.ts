@@ -1,110 +1,139 @@
-// Frontend DTOs (mirror backend DTOs). Keep in sync with API.
+// ---------------------------------------------
+// Enums
+// ---------------------------------------------
+export enum DataSourceType {
+	POSTGRESQL = 'POSTGRESQL',
+	MYSQL = 'MYSQL',
+}
 
-export type WORKSPACE_PURPOSE =
-  | 'HEALTH_CARE'
-  | 'E_COMMERCE'
-  | 'GOVERNEMENT'
-  | 'ACCOUNTING'
-  | 'OTHER';
+export enum WorkspacePurpose {
+	HEALTH_CARE = 'HEALTH_CARE',
+	E_COMMERCE = 'E_COMMERCE',
+	GOVERNMENT = 'GOVERNMENT',
+	ACCOUNTING = 'ACCOUNTING',
+	MARKETING = 'MARKETING',
+	EDUCATION = 'EDUCATION',
+	FINANCE = 'FINANCE',
+	ENTERTAINMENT = 'ENTERTAINMENT',
+	TECHNOLOGY = 'TECHNOLOGY',
+	REAL_ESTATE = 'REAL_ESTATE',
+	TRAVEL = 'TRAVEL',
+	FOOD_BEVERAGE = 'FOOD_BEVERAGE',
+	NON_PROFIT = 'NON_PROFIT',
+	SPORTS = 'SPORTS',
+	DEFAULT = 'DEFAULT',
+	OTHER = 'OTHER',
+}
 
-export type DATA_SOURCE_TYPE = 'POSTGRES' | 'MYSQL';
+export enum IngestionStatus {
+	PENDING = 'PENDING',
+	RUNNING = 'RUNNING',
+	SUCCEEDED = 'SUCCEEDED',
+	FAILED = 'FAILED',
+}
 
-/* ---------- Data source config ---------- */
+// ---------------------------------------------
+// Data source configs
+// ---------------------------------------------
 export interface PostgresConfig {
-  host: string;
-  port: number;
-  database: string;
-  user: string;
-  password: string;
-  ssl?: boolean;
+	host: string
+	port: number
+	database: string
+	user: string
+	password: string
+	ssl?: boolean
 }
 
 export interface MysqlConfig {
-  host: string;
-  port: number;
-  database: string;
-  user: string;
-  password: string;
+	host: string
+	port: number
+	database: string
+	user: string
+	password: string
 }
 
-export type DataSourceConfig = PostgresConfig | MysqlConfig;
+export type DataSourceConfig = PostgresConfig | MysqlConfig
 
 export interface DataSourceDto {
-  type: DATA_SOURCE_TYPE;
-  config: DataSourceConfig;
+	type: DataSourceType
+	config: DataSourceConfig
 }
 
-/* ---------- Workspaces ---------- */
+// ---------------------------------------------
+// Workspace DTOs
+// ---------------------------------------------
 export interface CreateWorkspaceDto {
-  name: string;
-  description: string;
-  purpose: WORKSPACE_PURPOSE;
+	name: string
+	description: string
+	purpose: WorkspacePurpose
 }
 
 export interface UpdateWorkspaceDto {
-  name?: string;
-  description?: string;
-  purpose?: WORKSPACE_PURPOSE;
+	name?: string
+	description?: string
+	purpose?: WorkspacePurpose
 }
 
 export interface WorkspaceDto {
-  id: number;
-  name: string;
-  description: string;
-  purpose: WORKSPACE_PURPOSE;
-  ownerId: number;
-  createdAt: string;  // ISO date from API
-  updatedAt: string;  // ISO date from API
-  dataSource?: DataSourceDto;
+	id: number
+	name: string
+	description: string
+	purpose: WorkspacePurpose
+	ownerId: number
+	createdAt: string | Date
+	updatedAt: string | Date
+	dataSource?: DataSourceDto
 }
 
-/* ---------- Upsert Data Source ---------- */
 export interface UpsertDataSourceDto {
-  type: DATA_SOURCE_TYPE;
-  config: DataSourceConfig;
+	type: DataSourceType
+	config: DataSourceConfig
 }
 
-/* ---------- Business metadata ---------- */
+// ---------------------------------------------
+// Business metadata DTOs
+// ---------------------------------------------
 export interface BusinessColumnDto {
-  id: number;
-  columnName: string;
-  dataType: string;
-  isNullable: boolean;
-  isPrimaryKey: boolean;
-  businessName?: string;
-  description?: string;
+	id: number
+	columnName: string
+	dataType: string
+	isNullable: boolean
+	isPrimaryKey: boolean
+	businessName?: string
+	description?: string
 }
 
 export interface BusinessTableDto {
-  id: number;
-  schemaName: string;
-  tableName: string;
-  businessName?: string;
-  description?: string;
-  columns: BusinessColumnDto[];
+	id: number
+	schemaName: string
+	tableName: string
+	businessName?: string
+	description?: string
+	columns: BusinessColumnDto[]
 }
 
 export interface BusinessMetadataDto {
-  tables: BusinessTableDto[];
+	tables: BusinessTableDto[]
 }
 
 export interface UpdateTableBusinessDto {
-  businessName?: string;
-  description?: string;
+	businessName?: string
+	description?: string
 }
 
 export interface UpdateColumnBusinessDto {
-  businessName?: string;
-  description?: string;
+	businessName?: string
+	description?: string
 }
 
-/* ---------- Ingestion ---------- */
-export interface StartIngestionResponse {
-  ingestionId: number;
+// ---------------------------------------------
+// Ingestion DTO
+// ---------------------------------------------
+export interface WorkspaceIngestionDto {
+	id: number
+	workspaceId: number
+	status: IngestionStatus
+	startedAt: string | Date | null
+	finishedAt: string | Date | null
+	error: string | null
 }
-
-/**
- * The backend type wasn't provided; keep flexible.
- * If you later define the precise shape, update this interface.
- */
-export type LatestIngestionDto = Record<string, unknown>;

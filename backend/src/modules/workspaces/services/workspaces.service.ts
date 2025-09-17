@@ -1,20 +1,21 @@
 // src/modules/workspaces/services/workspaces.service.ts
 
 import { Injectable, NotFoundException } from '@nestjs/common'
-import { PrismaService } from 'src/prisma/prisma.service'
+import { DATA_SOURCE_TYPE, INGESTION_STATUS } from '@prisma/client'
+import { LlmClientService } from 'src/common/llm/llm.client'
+import { PromptBuilderService } from 'src/common/llm/prompt.builder'
 import { EncryptionService } from 'src/common/services/encryption.service'
-import { SchemaReaderService } from './schema-reader.service'
+import { PrismaService } from 'src/prisma/prisma.service'
 import {
+	BusinessMetadataDto,
 	CreateWorkspaceDto,
 	UpdateWorkspaceDto,
 	UpsertDataSourceDto,
 	WorkspaceDto,
+	WorkspaceIngestionDto,
 } from '../dtos/workspaces.dtos'
-import { toWorkspaceDto } from '../utils/workspaces.mapper'
-import { DATA_SOURCE_TYPE, INGESTION_STATUS } from '@prisma/client'
 import { MysqlConfig, PostgresConfig } from '../types/data-source.types'
-import { LlmClientService } from 'src/common/llm/llm.client'
-import { PromptBuilderService } from 'src/common/llm/prompt.builder'
+import { toWorkspaceDto } from '../utils/workspaces.mapper'
 import {
 	asMysqlConfigOrThrow,
 	asPostgresConfigOrThrow,
@@ -22,14 +23,7 @@ import {
 	normalizeMysqlConfig,
 	normalizePostgresConfig,
 } from '../utils/workspaces.util'
-import {
-	BusinessMetadataDto,
-	BusinessTableDto,
-	BusinessColumnDto,
-	UpdateColumnBusinessDto,
-	UpdateTableBusinessDto,
-	WorkspaceIngestionDto,
-} from '../dtos/workspaces.dtos'
+import { SchemaReaderService } from './schema-reader.service'
 
 @Injectable()
 export class WorkspacesService {
@@ -163,8 +157,6 @@ export class WorkspacesService {
 		this.startIngestion(workspaceId, userId).catch(() => undefined)
 	}
 
-
-
 	async startIngestion(workspaceId: number, userId: number): Promise<{ ingestionId: number }> {
 		await this.getWorkspaceById(workspaceId, userId)
 		const ds = await this.prisma.workspaceDataSource.findFirst({ where: { workspaceId } })
@@ -268,53 +260,86 @@ export class WorkspacesService {
 	private async ingestWorkspace(workspaceId: number, dataSourceId: number, ingestionId: number) {
 		const ds = await this.prisma.workspaceDataSource.findUnique({ where: { id: dataSourceId } })
 		if (!ds) throw new NotFoundException('Data source not found')
+
 		const decrypted = this.encryptionService.decrypt(ds.config as unknown as string)
 		const parsed: unknown = JSON.parse(decrypted)
 		const cfg: PostgresConfig | MysqlConfig =
 			ds.type === DATA_SOURCE_TYPE.POSTGRESQL
 				? asPostgresConfigOrThrow(parsed)
 				: asMysqlConfigOrThrow(parsed)
+
 		const meta = await this.schemaReader.read(ds.type, cfg)
 
-		// Deduplicate columns (information_schema joins can produce duplicates)
-		const dedupColumns: typeof meta.columns = []
-		const colSeen = new Map<string, number>()
-		for (const c of meta.columns) {
-			const key = `${c.schemaName}.${c.tableName}.${c.columnName}`
-			const idx = colSeen.get(key)
-			if (idx === undefined) {
-				colSeen.set(key, dedupColumns.length)
-				dedupColumns.push({ ...c })
-			} else {
-				// merge flags (prefer true for isPrimaryKey; isNullable true if any says true)
-				dedupColumns[idx].isPrimaryKey = dedupColumns[idx].isPrimaryKey || c.isPrimaryKey
-				dedupColumns[idx].isNullable = dedupColumns[idx].isNullable || c.isNullable
-				// keep dataType from first occurrence
+		/* =============================
+     Helpers (normalized keys)
+     ============================= */
+		const tblKeyLc = (schema: string, table: string) => `${schema}.${table}`.toLowerCase()
+		const colKeyLc = (schema: string, table: string, column: string) =>
+			`${schema}.${table}.${column}`.toLowerCase()
+		const fkFromKeyLc = (f: { fromSchema: string; fromTable: string; fromColumn: string }) =>
+			`${f.fromSchema}.${f.fromTable}.${f.fromColumn}`.toLowerCase()
+
+		/* =============================
+     DEDUP TABLES (normalize case)
+     ============================= */
+		const dedupTables: typeof meta.tables = []
+		{
+			const seen = new Set<string>()
+			for (const t of meta.tables) {
+				const k = tblKeyLc(t.schemaName, t.tableName)
+				if (seen.has(k)) continue
+				seen.add(k)
+				dedupTables.push({ ...t })
 			}
 		}
 
-		// Deduplicate FKs by unique from-column key to align with our model uniqueness
+		/* =============================
+     DEDUP COLUMNS (normalize case)
+     ============================= */
+		const dedupColumns: typeof meta.columns = []
+		const colSeen = new Map<string, number>()
+		for (const c of meta.columns) {
+			const k = colKeyLc(c.schemaName, c.tableName, c.columnName)
+			const idx = colSeen.get(k)
+			if (idx === undefined) {
+				colSeen.set(k, dedupColumns.length)
+				dedupColumns.push({ ...c })
+			} else {
+				// merge flags; keep first dataType
+				dedupColumns[idx].isPrimaryKey ||= c.isPrimaryKey
+				dedupColumns[idx].isNullable ||= c.isNullable
+			}
+		}
+
+		/* =============================
+     DEDUP FKs (normalize case)
+     ============================= */
 		const dedupFks: typeof meta.fks = []
 		const fkSeen = new Set<string>()
 		for (const f of meta.fks) {
-			const key = `${f.fromSchema}.${f.fromTable}.${f.fromColumn}`
-			if (fkSeen.has(key)) continue
-			fkSeen.add(key)
-			dedupFks.push(f)
+			const k = fkFromKeyLc(f)
+			if (fkSeen.has(k)) continue
+			fkSeen.add(k)
+			dedupFks.push({ ...f })
 		}
 
-		// Pre-compute business metadata with LLM OUTSIDE of the DB transaction to avoid timeouts
+		/* =============================
+     Pre-compute business metadata
+     (outside tx to avoid timeouts)
+     ============================= */
 		type ColumnBiz = { name?: string; description?: string }
 		type TableBiz = {
 			businessName?: string
 			description?: string
-			columns: Record<string, ColumnBiz>
+			columns: Record<string, ColumnBiz> // key by ORIGINAL column name
 		}
-		const tableBizMap = new Map<string, TableBiz>()
-		for (const t of meta.tables) {
+		const tableBizMap = new Map<string, TableBiz>() // key: `${schema}.${table}` (original case)
+
+		for (const t of dedupTables) {
 			const colsForTable = dedupColumns.filter(
 				c => c.schemaName === t.schemaName && c.tableName === t.tableName,
 			)
+
 			let businessName: string | undefined
 			let tableDescription: string | undefined
 			const columnBusiness: Record<string, ColumnBiz> = {}
@@ -345,7 +370,6 @@ export class WorkspacesService {
 								description?: unknown
 							}>
 						}
-						// Try to extract JSON if the model wrapped it in markdown
 						const clean = cleanMarkdownJson(txt)
 						const parsed: unknown = JSON.parse(clean)
 						const obj = parsed as BusinessNamesJson
@@ -353,12 +377,8 @@ export class WorkspacesService {
 							const tInfo = obj.table
 							if (tInfo && typeof tInfo === 'object') {
 								const ti = tInfo as { businessName?: unknown; description?: unknown }
-								if (typeof ti.businessName === 'string') {
-									businessName = ti.businessName
-								}
-								if (typeof ti.description === 'string') {
-									tableDescription = ti.description
-								}
+								if (typeof ti.businessName === 'string') businessName = ti.businessName
+								if (typeof ti.description === 'string') tableDescription = ti.description
 							}
 							if (Array.isArray(obj.columns)) {
 								for (const col of obj.columns) {
@@ -373,11 +393,11 @@ export class WorkspacesService {
 							}
 						}
 					} catch {
-						// ignore parse errors
+						/* ignore parse errors */
 					}
 				}
 			} catch {
-				// ignore LLM errors; fall back to undefined business names
+				/* ignore LLM errors */
 			}
 
 			tableBizMap.set(`${t.schemaName}.${t.tableName}`, {
@@ -387,15 +407,19 @@ export class WorkspacesService {
 			})
 		}
 
-		// Write everything in a single short-lived transaction with a higher timeout for bulk inserts
+		/* =============================
+     Write snapshot in one tx
+     ============================= */
 		await this.prisma.$transaction(
 			async tx => {
+				// Clear previous snapshot (assumes FK cascade or manual cleanup elsewhere)
 				await tx.dataTable.deleteMany({ where: { workspaceId } })
 
-				const tableMap = new Map<string, number>()
-				for (const t of meta.tables) {
+				// Insert tables (deduped). You can switch to upsert if you want belt & suspenders.
+				const tableMap = new Map<string, number>() // key: LOWERCASE `${schema}.${table}`
+				for (const t of dedupTables) {
 					const biz = tableBizMap.get(`${t.schemaName}.${t.tableName}`)
-					const rec = await tx.dataTable.create({
+					const tbl = await tx.dataTable.create({
 						data: {
 							workspaceId,
 							schemaName: t.schemaName,
@@ -404,17 +428,31 @@ export class WorkspacesService {
 							description: biz?.description,
 						},
 					})
-					tableMap.set(`${t.schemaName}.${t.tableName}`, rec.id)
+					tableMap.set(tblKeyLc(t.schemaName, t.tableName), tbl.id)
+
+					// If you prefer upsert (not necessary after deleteMany + dedup):
+					// const tbl = await tx.dataTable.upsert({
+					//   where: { workspaceId_schemaName_tableName: { workspaceId, schemaName: t.schemaName, tableName: t.tableName } },
+					//   create: { workspaceId, schemaName: t.schemaName, tableName: t.tableName, businessName: biz?.businessName, description: biz?.description },
+					//   update: { businessName: biz?.businessName ?? undefined, description: biz?.description ?? undefined },
+					// })
+					// tableMap.set(tblKeyLc(t.schemaName, t.tableName), tbl.id)
 				}
 
-				const columnKeyToId = new Map<string, number>()
+				// Insert columns with UPSERT on composite unique (tableId, columnName)
+				const columnKeyToId = new Map<string, number>() // key: LOWERCASE `${schema}.${table}.${column}`
 				for (const c of dedupColumns) {
-					const tableId = tableMap.get(`${c.schemaName}.${c.tableName}`)
+					const tableId = tableMap.get(tblKeyLc(c.schemaName, c.tableName))
 					if (!tableId) continue
 					const biz = tableBizMap.get(`${c.schemaName}.${c.tableName}`)
 					const colBiz = biz?.columns[c.columnName]
-					const col = await tx.dataColumn.create({
-						data: {
+
+					// IMPORTANT: use upsert on @@unique([tableId, columnName])
+					const col = await tx.dataColumn.upsert({
+						where: {
+							tableId_columnName: { tableId, columnName: c.columnName },
+						},
+						create: {
 							tableId,
 							columnName: c.columnName,
 							dataType: c.dataType,
@@ -423,28 +461,44 @@ export class WorkspacesService {
 							businessName: colBiz?.name,
 							description: colBiz?.description,
 						},
+						update: {
+							dataType: c.dataType,
+							isNullable: c.isNullable,
+							isPrimaryKey: c.isPrimaryKey,
+							businessName: colBiz?.name ?? undefined,
+							description: colBiz?.description ?? undefined,
+						},
 					})
-					columnKeyToId.set(`${c.schemaName}.${c.tableName}.${c.columnName}`, col.id)
+
+					columnKeyToId.set(colKeyLc(c.schemaName, c.tableName, c.columnName), col.id)
 				}
 
+				// Foreign keys
 				for (const f of dedupFks) {
-					const fromTableId = tableMap.get(`${f.fromSchema}.${f.fromTable}`)
-					const toTableId = tableMap.get(`${f.toSchema}.${f.toTable}`)
-					const fromColumnId = columnKeyToId.get(`${f.fromSchema}.${f.fromTable}.${f.fromColumn}`)
-					const toColumnId = columnKeyToId.get(`${f.toSchema}.${f.toTable}.${f.toColumn}`)
+					const fromTableId = tableMap.get(tblKeyLc(f.fromSchema, f.fromTable))
+					const toTableId = tableMap.get(tblKeyLc(f.toSchema, f.toTable))
+					const fromColumnId = columnKeyToId.get(colKeyLc(f.fromSchema, f.fromTable, f.fromColumn))
+					const toColumnId = columnKeyToId.get(colKeyLc(f.toSchema, f.toTable, f.toColumn))
 					if (!fromTableId || !toTableId || !fromColumnId || !toColumnId) continue
-					await tx.foreignKey.create({
-						data: {
+
+					await tx.foreignKey.upsert({
+						where: { fromColumnId },
+						create: {
 							fromTableId,
 							fromColumnId,
 							toTableId,
 							toColumnId,
 							constraintName: f.constraintName,
 						},
+						update: {
+							toTableId,
+							toColumnId,
+							constraintName: f.constraintName ?? undefined,
+						},
 					})
 				}
 			},
-			{ timeout: 30000 },
+			{ timeout: 30_000 },
 		)
 
 		await this.prisma.workspaceIngestion.update({

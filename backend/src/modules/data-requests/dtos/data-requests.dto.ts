@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger'
+import { USER_REQUEST_STATUS } from '@prisma/client'
 import { IsNotEmpty, IsString, MaxLength } from 'class-validator'
 
 export class CreateDataRequestDto {
@@ -14,7 +15,7 @@ export class DataRequestResultDto {
 	requestId: number
 
 	@ApiProperty()
-	status: string
+	status: USER_REQUEST_STATUS
 
 	@ApiProperty({ required: false })
 	responseId?: string

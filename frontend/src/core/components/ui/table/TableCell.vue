@@ -1,6 +1,13 @@
 <script setup lang="ts">
-import type { HTMLAttributes } from "vue"
-import { cn } from '@/core/utils/tailwind.utils'
+import type { HTMLAttributes } from "vue";
+
+
+
+import { cn } from '@/core/utils/tailwind.utils';
+
+
+
+
 
 const props = defineProps<{
   class?: HTMLAttributes["class"]
@@ -8,15 +15,15 @@ const props = defineProps<{
 </script>
 
 <template>
-  <td
-    data-slot="table-cell"
-    :class="
+	<td
+		data-slot="table-cell"
+		:class="
       cn(
         'p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]',
         props.class,
       )
     "
-  >
-    <slot />
-  </td>
+	>
+		<slot />
+	</td>
 </template>

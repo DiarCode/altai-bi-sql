@@ -1,28 +1,31 @@
 // src/modules/workspaces/workspaces.controller.ts
 
 import {
-	Controller,
-	Get,
-	Post,
-	Put,
-	Delete,
 	Body,
+	Controller,
+	Delete,
+	Get,
 	Param,
 	ParseIntPipe,
+	Post,
+	Put,
 	UseGuards,
 } from '@nestjs/common'
 import { ApiResponse, ApiTags } from '@nestjs/swagger'
 import { GetCurrentUser } from 'src/common/decorators/get-current-users.decorator'
+import { UsersAuthGuard } from 'src/common/guards/users-auth.guard'
 import { UserClaims } from 'src/common/types/user-request.interface'
-import { WorkspacesService } from './services/workspaces.service'
 import {
+	BusinessMetadataDto,
 	CreateWorkspaceDto,
+	UpdateColumnBusinessDto,
+	UpdateTableBusinessDto,
 	UpdateWorkspaceDto,
 	UpsertDataSourceDto,
 	WorkspaceDto,
+	WorkspaceIngestionDto,
 } from './dtos/workspaces.dtos'
-import { BusinessMetadataDto, UpdateTableBusinessDto, UpdateColumnBusinessDto, WorkspaceIngestionDto } from './dtos/workspaces.dtos'
-import { UsersAuthGuard } from 'src/common/guards/users-auth.guard'
+import { WorkspacesService } from './services/workspaces.service'
 
 @ApiTags('workspaces')
 @UseGuards(UsersAuthGuard)
@@ -119,7 +122,7 @@ export class WorkspacesController {
 	async getLatestIngestion(
 		@GetCurrentUser() user: UserClaims,
 		@Param('id', ParseIntPipe) id: number,
-): Promise<WorkspaceIngestionDto> {
+	): Promise<WorkspaceIngestionDto> {
 		return this.workspacesService.getLatestIngestion(id, user.id)
 	}
 

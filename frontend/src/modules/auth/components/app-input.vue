@@ -1,8 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { Input } from '@/core/components/ui/input'
-import { Label } from '@/core/components/ui/label'
-import { cn } from '@/core/utils/tailwind.utils'
+import { ref } from 'vue';
+
+
+
+import { Input } from '@/core/components/ui/input';
+import { Label } from '@/core/components/ui/label';
+import { cn } from '@/core/utils/tailwind.utils';
+
+
+
+
 
 interface Props {
 	modelValue: string | number
@@ -51,9 +58,13 @@ const handleInput = (value: string | number) => {
 			class="block text-sm font-medium text-foreground"
 		>
 			{{ label }}
-			<span v-if="required" class="text-destructive">*</span>
+			<span
+				v-if="required"
+				class="text-destructive"
+				>*</span
+			>
 		</Label>
-		
+
 		<div class="relative">
 			<Input
 				:id="inputId"
@@ -70,17 +81,28 @@ const handleInput = (value: string | number) => {
 				@blur="$emit('blur')"
 				@focus="$emit('focus')"
 			/>
-			
-			<div v-if="loading" class="absolute right-3 top-1/2 transform -translate-y-1/2">
-				<div class="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+
+			<div
+				v-if="loading"
+				class="absolute right-3 top-1/2 transform -translate-y-1/2"
+			>
+				<div
+					class="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"
+				></div>
 			</div>
 		</div>
-		
-		<p v-if="error" class="text-sm text-destructive">
+
+		<p
+			v-if="error"
+			class="text-sm text-destructive"
+		>
 			{{ error }}
 		</p>
-		
-		<p v-if="hint && !error" class="text-sm text-muted-foreground">
+
+		<p
+			v-if="hint && !error"
+			class="text-sm text-muted-foreground"
+		>
 			{{ hint }}
 		</p>
 	</div>
